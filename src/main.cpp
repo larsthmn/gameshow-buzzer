@@ -246,8 +246,21 @@ void lightFirstBuzzer(bool red, bool blue, bool reset)
                chooseRed = !lastChoiceSameTime;
                lastChoiceSameTime = chooseRed;
             }
-            digitalWrite(RED_BUZZER_LED, chooseRed ? HIGH : LOW);
-            digitalWrite(BLUE_BUZZER_LED, chooseRed ? LOW : HIGH);
+            lcd16_2.clear();
+            lcd16_2.setCursor(0, 0);
+            if (chooseRed)
+            {
+               lcd16_2.print("ROT antwortet");
+               digitalWrite(RED_BUZZER_LED, HIGH);
+               digitalWrite(BLUE_BUZZER_LED, LOW);
+            }
+            else
+            {
+               lcd16_2.print("BLAU antwortet");
+               digitalWrite(RED_BUZZER_LED, LOW);
+               digitalWrite(BLUE_BUZZER_LED, HIGH);
+            }
+
 
             soundPlayer.requestPlayback(SOUND_TIMER_START, 5);
             lastBeepAtTimeLeft = timeToAnswerMs;
@@ -272,9 +285,11 @@ void lightFirstBuzzer(bool red, bool blue, bool reset)
             lastBeepAtTimeLeft -= 1000;
          }
 
-         lcd20_4.setCursor(0, 3);
-         lcd20_4.print("Timer: ");
-         lcd20_4.print((timeLeft) / 1000.0, 1);
+
+         lcd16_2.setCursor(0, 1);
+         lcd16_2.print("Timer: ");
+         lcd16_2.print((timeLeft) / 1000.0, 1);
+         lcd16_2.print("  ");
 
          if (reset || timeLeft <= 0)
          {
@@ -284,9 +299,9 @@ void lightFirstBuzzer(bool red, bool blue, bool reset)
 
             soundPlayer.requestPlayback(SOUND_TIMER_END, 6);
 
-            lcd20_4.setCursor(0, 3);
-            lcd20_4.print("                    ");
-
+            lcd16_2.clear();
+            lcd16_2.setCursor(0, 0);
+            lcd16_2.print("Buzzer offen!");
          }
          break;
       }
@@ -373,7 +388,7 @@ void getInputValues(InputValues& values)
 void soundBoard(const InputValues& values)
 {
    static int displayPage = -1;
-   static unsigned int currentPage = 0;
+   static int currentPage = 0;
    auto& soundBoardPages = soundPlayer.getPages();
    unsigned int soundBoardPagesCount = soundPlayer.getPages().size();
    if (soundBoardPagesCount == 0) return;
@@ -383,11 +398,11 @@ void soundBoard(const InputValues& values)
       bool isLastPage = currentPage == soundBoardPagesCount - 1;
       if (values.lcdBtn == BUTTON_LEFT && !isFirstPage)
       {
-         currentPage = (currentPage - 1) % soundBoardPagesCount;
+         currentPage = (int)((currentPage - 1) % soundBoardPagesCount);
       }
       else if (values.lcdBtn == BUTTON_RIGHT && !isLastPage)
       {
-         currentPage = (currentPage + 1) % soundBoardPagesCount;
+         currentPage = (int)((currentPage + 1) % soundBoardPagesCount);
       }
    }
    if (displayPage != currentPage)
@@ -429,6 +444,7 @@ void soundBoard(const InputValues& values)
    {
       switch (values.pushBtn)
       {
+         // todo: handle out of bounds if there are < 6 files
          case BUTTON_YELLOW:
             soundPlayer.requestPlayback(soundBoardPages[currentPage].files[0].getFilename(), 2);
             break;

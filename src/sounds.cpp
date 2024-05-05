@@ -5,10 +5,19 @@
 #include "sounds.h"
 #include "pins.h"
 
+// Tried both libs, ESP8266Audio seems to be better, other one has following problems:
+//  - cut off sounds / sounds not even played when too short
+//  - failure to play some wav files breaking the lib (no more sounds playable after that)
+// Both have some artifacts and different volume levels, but this could be due to HW reasons
+#define USE_ESPAUDIO 0
+
+#if USE_ESPAUDIO
+#include "Audio.h"
+#else
 #include "AudioOutputI2S.h"
 #include "AudioFileSourceSD.h"
 #include "AudioGeneratorWAV.h"
-
+#endif
 #include <Arduino.h>
 
 #define chipSelect SS // ESP32 SD card select pin
@@ -30,12 +39,13 @@ static void readFiles(std::vector<SoundBoardPage>& pages)
    }
 
    pages.clear();
+   pages.reserve(10);
 
    while (File file = root.openNextFile()) {
       if (file.isDirectory()) {
          SoundBoardPage newPage;
          std::string empty;
-         newPage.files.resize(6, SoundBoardSound(empty, 0, 0));
+         newPage.files.reserve(6);
 
          // Get the full directory name
          std::string dirname = file.name();
@@ -73,10 +83,13 @@ static void readFiles(std::vector<SoundBoardPage>& pages)
             Serial.printf("index %i\n", index);
 
             // Fill in info structure
-            SoundBoardSound fileInfo = SoundBoardSound(filename, firstUnderscore + 1, nameEnd);
+            std::string fullFilename = filePath + '/' + filename;
+            SoundBoardSound fileInfo = SoundBoardSound(fullFilename, filePath.size() + firstUnderscore + 1 + 1,
+                                                       filePath.size() + nameEnd + 1);
             Serial.printf("%i: %s (%s)\n", index, fileInfo.getFilename().c_str(), fileInfo.getDescription().c_str());
-            newPage.files[index - 1] = fileInfo;
+            newPage.files.push_back(fileInfo);
          }
+         pages.push_back(newPage);
       }
    }
 
@@ -102,7 +115,7 @@ void SoundPlayer::requestPlayback(const std::string& filename, int prio)
    SoundRequest request{};
    strcpy(request.filename, filename.c_str());
    request.prio = prio;
-   xQueueSend(playQueue, &request, pdMS_TO_TICKS(1000));
+   xQueueSend(playQueue, &request, pdMS_TO_TICKS(10));
 }
 
 const std::vector<SoundBoardPage>& SoundPlayer::getPages()
@@ -110,20 +123,24 @@ const std::vector<SoundBoardPage>& SoundPlayer::getPages()
    return pages;
 }
 
+
+
 [[noreturn]] void SoundPlayer::playbackHandler()
 {
-   SoundRequest currentRequest{};
-//   AudioFileSourceSD* in;
-   AudioGeneratorWAV wav;
-   AudioOutputI2S out;
-
    delay(1000);
 
+#if USE_ESPAUDIO
+   Audio audio;
+   audio.setVolume(21); // 0...21
+   audio.setPinout(I2S_BCLK, I2S_LRC, I2S_DOUT);
+#else
+   AudioGeneratorWAV wav;
+   AudioOutputI2S out;
+   out.SetPinout(I2S_BCLK, I2S_LRC, I2S_DOUT);
+   out.SetGain(1);
    out.begin();
-   out.SetGain(0.1);
-   out.SetPinout(I2S_BCLK, I2S_LRC, I2S_DIN);
+#endif
 
-//   audioLogger = &Serial;
 
    while (!SD.begin(chipSelect))
    {
@@ -136,28 +153,33 @@ const std::vector<SoundBoardPage>& SoundPlayer::getPages()
 
    while (true)
    {
+      SoundRequest currentRequest{};
       // Wait for a new request to arrive
       if (xQueueReceive(playQueue, &currentRequest, portMAX_DELAY))
       {
-         Serial.print(millis());
-         Serial.print(": Playback of ");
-         // Play the requested sound
-         Serial.print(currentRequest.filename);
-         Serial.print(" with prio ");
-         Serial.println(currentRequest.prio);
+         Serial.printf("%lu: Playback of %s (prio %i)\n", millis(), currentRequest.filename, currentRequest.prio);
 
+#if USE_ESPAUDIO
+         audio.connecttoSD(currentRequest.filename);
+         audio.setVolume(21); // 0...21
+
+         while (audio.isRunning() && !xQueuePeek(playQueue, &currentRequest, 0))
+         {
+            audio.loop();
+         }
+         delay(10);
+         audio.stopSong();
+#else
          auto in = AudioFileSourceSD(currentRequest.filename);
          wav.begin(&in, &out);
 
-         while (true)
+         while (wav.isRunning() && !xQueuePeek(playQueue, &currentRequest, 0))
          {
-            if (!wav.loop())
-            {
-               wav.stop();
-               break;
-            }
+            wav.loop();
             delay(1);
          }
+         wav.stop();
+#endif
          Serial.println("Finish playback");
       }
    }
@@ -166,7 +188,9 @@ const std::vector<SoundBoardPage>& SoundPlayer::getPages()
 void SoundPlayer::start()
 {
    playQueue = xQueueCreate(2, sizeof(SoundRequest));
-   xTaskCreate(playbackHandlerStub, "PlaybackTask", 8192, this, 5, &playbackTask);
+   xTaskCreate(playbackHandlerStub, "PlaybackTask", 8192, this, 2 | portPRIVILEGE_BIT, &playbackTask);
 }
+
+
 
 

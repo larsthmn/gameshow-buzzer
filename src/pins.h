@@ -43,6 +43,6 @@
 // I2S amplifier
 #define I2S_LRC GPIO_NUM_16
 #define I2S_BCLK GPIO_NUM_15
-#define I2S_DIN GPIO_NUM_17
+#define I2S_DOUT GPIO_NUM_17
 
 #endif //ESP32_BUZZER_PINS_H
