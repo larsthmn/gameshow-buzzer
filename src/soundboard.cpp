@@ -123,7 +123,7 @@ std::string SoundBoard::getFileName(int pageIndex, int fileIndex)
 {
    if (pageIndex >= pages.size() || fileIndex >= pages[pageIndex].files.size())
    {
-      return 0;
+      return "";
    }
    return pages[pageIndex].files[fileIndex].getFilename();
 }
@@ -132,7 +132,7 @@ std::string SoundBoard::getDescription(int pageIndex, int fileIndex)
 {
    if (pageIndex >= pages.size() || fileIndex >= pages[pageIndex].files.size())
    {
-      return 0;
+      return "";
    }
    return pages[pageIndex].files[fileIndex].getDescription();
 }
