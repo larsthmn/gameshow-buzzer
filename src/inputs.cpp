@@ -127,6 +127,12 @@ void getInputValues(InputValues& values)
    lcdBtnFilter.inputValue(values.readingLcdButtons);
    ButtonType lcdBtn = lcdBtnFilter.getButton();
    values.lcdBtnChanged = values.lcdBtn != lcdBtn;
+   if (values.lcdBtnChanged)
+   {
+      Serial.print(ButtonTypeStr[values.lcdBtn]);
+      Serial.print("->");
+      Serial.println(ButtonTypeStr[lcdBtn]);
+   }
    values.lcdBtn = lcdBtn;
 }
 

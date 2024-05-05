@@ -9,8 +9,6 @@
 
 #include <hd44780.h>                       // main hd44780 header
 #include <hd44780ioClass/hd44780_I2Cexp.h> // i2c expander i/o class header
-#include <cstdint>
-#include <cmath>
 #include <SD.h>
 
 #include "pins.h"
@@ -22,15 +20,35 @@
 
 hd44780_I2Cexp lcd16_2(0x27); // declare lcd object: auto locate & auto config expander chip
 LiquidCrystal lcd20_4(LCD_RS, LCD_E, LCD_D4, LCD_D5, LCD_D6, LCD_D7);
-//LcdMenu menu(LCD_ROWS, LCD_COLS);
+LcdMenu menu(4, 20);
 SoundPlayer soundPlayer;
 SoundBoard soundBoard;
+
+struct Config {
+   uint8_t buzzerVolume; // 0..100 %
+   uint8_t soundBoardVolume; // 0..100 %
+   bool enableBuzzerSounds;
+};
+Config config;
+
+void toggleBuzzerSounds(uint16_t value) {
+   config.enableBuzzerSounds = !!value;
+}
+
+MAIN_MENU(
+   ITEM_TOGGLE("Buzzer Sounds", "ON", "OFF", toggleBuzzerSounds),
+   ITEM_BASIC("foobar"),
+   ITEM_BASIC("baz"),
+   ITEM_BASIC("ddashdjka"),
+   ITEM_BASIC("blaa")
+);
 
 void setup()
 {
    Serial.begin(115200);
 
-
+   menu.setupLcdWithMenu(LCD_RS, LCD_E, LCD_D4, LCD_D5, LCD_D6, LCD_D7, mainMenu);
+   menu.hide();
 
    lcd16_2.begin(16, 2);
    lcd20_4.begin(20, 4);
@@ -130,7 +148,7 @@ void lightFirstBuzzer(bool red, bool blue, bool reset)
          }
 
 
-         lcd16_2.setCursor(0, 1);
+         lcd16_2.setCursor(1, 1);
          lcd16_2.print("Timer: ");
          lcd16_2.print((timeLeft) / 1000.0, 1);
          lcd16_2.print("  ");
@@ -144,7 +162,7 @@ void lightFirstBuzzer(bool red, bool blue, bool reset)
             soundPlayer.requestPlayback(SOUND_TIMER_END, SOUND_PRIO_BUZZER_END);
 
             lcd16_2.clear();
-            lcd16_2.setCursor(0, 0);
+            lcd16_2.setCursor(1, 0);
             lcd16_2.print("Buzzer offen!");
          }
          break;
@@ -159,55 +177,68 @@ void lightFirstBuzzer(bool red, bool blue, bool reset)
 }
 
 
-void debugScreen(const InputValues& values)
+bool debugScreen(const InputValues& values, bool enter)
 {
-   lcd20_4.setCursor(0, 0);
-   lcd20_4.print("Red: ");
-   lcd20_4.print(values.isRedBuzzerPressed);
-   lcd20_4.print(", ");
-   lcd20_4.print("Blue: ");
-   lcd20_4.print(values.isBlueBuzzerPressed);
+   static uint32_t lastChange = millis();
+   static uint32_t lastUpdate = 0;
 
+   if (enter)  {
+      lastChange = millis();
+      lcd20_4.clear();
+   }
 
-   static ButtonType prevPushBtn = BUTTON_NONE;
-   lcd20_4.setCursor(0, 1);
-   lcd20_4.print("Pshb:");
-   lcd20_4.print(values.readingPushButtons);
-   lcd20_4.print("~");
-   if (values.pushBtn != prevPushBtn && values.pushBtn != BUTTON_NONE) Serial.println(ButtonTypeStr[values.pushBtn]);
-   prevPushBtn = values.pushBtn;
-   lcd20_4.print(ButtonTypeStr[values.pushBtn]);
-   lcd20_4.print("  ");
+   if (millis() - lastUpdate > 250)  // updating too fast makes it hard to read
+   {
+      lcd20_4.setCursor(0, 0);
+      lcd20_4.print("Red: ");
+      lcd20_4.print(values.isRedBuzzerPressed);
+      lcd20_4.print(", ");
+      lcd20_4.print("Blue: ");
+      lcd20_4.print(values.isBlueBuzzerPressed);
 
-   static ButtonType prevLcdBtn = BUTTON_NONE;
-   lcd20_4.setCursor(0, 2);
-   lcd20_4.print("LCDb:");
-   lcd20_4.print(values.readingLcdButtons);
-   lcd20_4.print("~");
-   if (values.lcdBtn != prevLcdBtn && values.lcdBtn != BUTTON_NONE) Serial.println(ButtonTypeStr[values.lcdBtn]);
-   prevLcdBtn = values.lcdBtn;
-   lcd20_4.print(ButtonTypeStr[values.lcdBtn]);
-   lcd20_4.print("  ");
+      static ButtonType prevPushBtn = BUTTON_NONE;
+      lcd20_4.setCursor(0, 1);
+      lcd20_4.print("Pshb:");
+      lcd20_4.print(values.readingPushButtons);
+      lcd20_4.print("~");
+      if (values.pushBtn != prevPushBtn && values.pushBtn != BUTTON_NONE) Serial.println(ButtonTypeStr[values.pushBtn]);
+      prevPushBtn = values.pushBtn;
+      lcd20_4.print(ButtonTypeStr[values.pushBtn]);
+      lcd20_4.print("  ");
+
+      static ButtonType prevLcdBtn = BUTTON_NONE;
+      lcd20_4.setCursor(0, 2);
+      lcd20_4.print("LCDb:");
+      lcd20_4.print(values.readingLcdButtons);
+      lcd20_4.print("~");
+      if (values.lcdBtn != prevLcdBtn && values.lcdBtn != BUTTON_NONE) Serial.println(ButtonTypeStr[values.lcdBtn]);
+      prevLcdBtn = values.lcdBtn;
+      lcd20_4.print(ButtonTypeStr[values.lcdBtn]);
+      lcd20_4.print("  ");
+      lastUpdate = millis();
+   }
+
+   return (millis() - lastChange > 3000 && (values.lcdBtnChanged && (values.lcdBtn == BUTTON_UP || values.lcdBtn == BUTTON_DOWN)));
 }
 
 
-void soundBoardScreen(const InputValues& values)
+bool soundBoardScreen(const InputValues& values, bool enter)
 {
    static int displayPage = -1;
+   if (enter) displayPage = -1; // leads to screen update
    static int currentPage = 0;
-   unsigned int soundBoardPagesCount = soundBoard.getPageCount();
-   if (soundBoardPagesCount == 0) return;
+   int soundBoardPagesCount = soundBoard.getPageCount();
+   if (soundBoardPagesCount == 0) return true;
    if (values.lcdBtnChanged)
    {
-      bool isFirstPage = currentPage == 0;
-      bool isLastPage = currentPage == soundBoardPagesCount - 1;
-      if (values.lcdBtn == BUTTON_LEFT && !isFirstPage)
+      if (values.lcdBtn == BUTTON_LEFT)
       {
-         currentPage = (int)((currentPage - 1) % soundBoardPagesCount);
+         bool isFirstPage = currentPage == 0;
+         currentPage = isFirstPage ? soundBoardPagesCount - 1 : (currentPage - 1) % soundBoardPagesCount;
       }
-      else if (values.lcdBtn == BUTTON_RIGHT && !isLastPage)
+      else if (values.lcdBtn == BUTTON_RIGHT)
       {
-         currentPage = (int)((currentPage + 1) % soundBoardPagesCount);
+         currentPage = (currentPage + 1) % soundBoardPagesCount;
       }
    }
    if (displayPage != currentPage)
@@ -225,9 +256,7 @@ void soundBoardScreen(const InputValues& values)
          lcd20_4.print(soundRight.c_str());
       }
       lcd20_4.setCursor(0, 3);
-      bool isFirstPage = currentPage == 0;
-      bool isLastPage = currentPage == soundBoardPagesCount - 1;
-      if (!isFirstPage) lcd20_4.print("<");
+      lcd20_4.print("<");
       lcd20_4.setCursor(2, 3);
       lcd20_4.print(currentPage + 1);
       lcd20_4.print("/");
@@ -235,7 +264,7 @@ void soundBoardScreen(const InputValues& values)
       lcd20_4.print(" ");
       lcd20_4.print(soundBoard.getPageName(currentPage).c_str());
       lcd20_4.setCursor(19, 4);
-      if (!isLastPage) lcd20_4.print(">");
+      lcd20_4.print(">");
       displayPage = currentPage;
    }
    if (values.pushBtnChanged)
@@ -269,39 +298,63 @@ void soundBoardScreen(const InputValues& values)
          if (!filename.empty()) soundPlayer.requestPlayback(filename, SOUND_PRIO_SOUNDBOARD);
       }
    }
+
+   return values.lcdBtnChanged && (values.lcdBtn == BUTTON_UP || values.lcdBtn == BUTTON_DOWN);
 }
+
+bool menuScreen(const InputValues& values, bool enter)
+{
+   if (enter) menu.show();
+   if (values.lcdBtnChanged)
+   {
+      switch (values.lcdBtn)   {
+         case BUTTON_NONE:
+            break;
+         case BUTTON_UP:
+            menu.up();
+            break;
+         case BUTTON_LEFT:
+            menu.back();
+            break;
+         case BUTTON_DOWN:
+            menu.down();
+            break;
+         case BUTTON_RIGHT:
+            menu.right();
+            break;
+         case BUTTON_ENTER:
+            menu.enter();
+            break;
+         default:
+            break;
+      }
+   }
+
+   return values.pushBtnChanged;
+}
+
+// return value: should exit the screen
+typedef bool (*screenFunction)(const InputValues& values, bool enter);
 
 void loop()
 {
    static InputValues values = {};
    getInputValues(values);
-//   debugScreen(values);
-   soundBoardScreen(values);
-   lightFirstBuzzer(values.isRedBuzzerPressed, values.isBlueBuzzerPressed, values.lcdBtn == BUTTON_LEFT);
 
-//   if (lastButtonType == BUTTON_NONE)
-//   {
-//      switch (btn.type)   {
-//         case BUTTON_NONE:
-//            break;
-//         case BUTTON_UP:
-//            menu.up();
-//            break;
-//         case BUTTON_LEFT:
-//            menu.back();
-//            break;
-//         case BUTTON_DOWN:
-//            menu.down();
-//            break;
-//         case BUTTON_RIGHT:
-//            menu.right();
-//            break;
-//         case BUTTON_ENTER:
-//            menu.enter();
-//            break;
-//      }
-//   }
-//   lastButtonType = btn.type;
+   screenFunction screenFunctions[] = {
+      soundBoardScreen,
+      debugScreen,
+      menuScreen,
+   };
+   static uint32_t screen = 0;
+   static uint32_t prevScreen = UINT32_MAX;
+   bool leaveScreen = screenFunctions[screen](values, prevScreen != screen);
+   prevScreen = screen;
+   if (leaveScreen) {
+      screen = (screen + 1) % (sizeof(screenFunctions) / sizeof (screenFunctions[0]));
+   }
+
+   lightFirstBuzzer(values.isRedBuzzerPressed, values.isBlueBuzzerPressed, values.lcdBtn == BUTTON_LEFT);
 
    delay(5);
 }
