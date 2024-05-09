@@ -37,4 +37,6 @@ public:
    void requestPlayback(const std::string& filename, int prio, uint8_t volume);
 };
 
+extern SoundPlayer soundPlayer;
+
 #endif //ESP32_BUZZER_SOUNDS_H

@@ -22,7 +22,7 @@ private:
    int values[CFG_COUNT];
 
 public:
-   uint32_t getValue(ConfigValue cfg)
+   int getValue(ConfigValue cfg)
    {
       return values[cfg];
    }

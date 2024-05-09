@@ -15,6 +15,7 @@
 #include "AudioGeneratorWAV.h"
 #include <Arduino.h>
 
+SoundPlayer soundPlayer;
 
 struct SoundRequest
 {
