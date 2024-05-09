@@ -9,10 +9,12 @@ struct ConfigDefinition
    const char* key;
    int defaultValue;
 };
-ConfigDefinition cfgKeys[CFG_COUNT] = {
-   { "buzzer-vol", 60 },
-   { "buzzer-en", 1 },
-   { "soundboard-vol", 100 }
+static const ConfigDefinition configDefinitions[CFG_COUNT] = {
+   { "buz-beep-vol", 60 },
+   { "buz-start-vol", 60 },
+   { "buz-end-vol", 60 },
+   { "soundboard-vol", 100 },
+   { "time-to-answer", 5 }
 };
 
 
@@ -23,7 +25,7 @@ void Config::save()
    preferences.begin("buzzer", false);
    for (int i = 0; i < CFG_COUNT; i++)
    {
-      preferences.putInt(cfgKeys[i].key, values[i]);
+      preferences.putInt(configDefinitions[i].key, values[i]);
    }
    preferences.end();
 }
@@ -36,7 +38,14 @@ void Config::load()
 
    for (int i = 0; i < CFG_COUNT; i++)
    {
-      values[i] = preferences.getInt(cfgKeys[i].key, cfgKeys[i].defaultValue);
+      values[i] = preferences.getInt(configDefinitions[i].key, configDefinitions[i].defaultValue);
    }
    preferences.end();
 }
+
+int Config::defaultValue(ConfigValue cfg)
+{
+   return configDefinitions[cfg].defaultValue;
+}
+
+

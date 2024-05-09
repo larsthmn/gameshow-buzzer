@@ -9,15 +9,17 @@
 #include <cstdint>
 
 enum ConfigValue {
-   CFG_BUZZER_VOLUME,
-   CFG_BUZZER_ENABLED,
+   CFG_BUZZER_BEEP_VOLUME,
+   CFG_BUZZER_START_VOLUME,
+   CFG_BUZZER_END_VOLUME,
    CFG_SOUNDBOARD_VOLUME,
+   CFG_TIME_TO_ANSWER,
    CFG_COUNT
 };
 
 class Config {
 private:
-   uint32_t values[CFG_COUNT];
+   int values[CFG_COUNT];
 
 public:
    uint32_t getValue(ConfigValue cfg)
@@ -25,7 +27,7 @@ public:
       return values[cfg];
    }
 
-   void setValue(ConfigValue cfg, uint32_t value)
+   void setValue(ConfigValue cfg, int value)
    {
       if (values[cfg] != value)
       {
@@ -33,6 +35,8 @@ public:
          save();
       }
    }
+
+   static int defaultValue(ConfigValue cfg);
 
    void save();
    void load();

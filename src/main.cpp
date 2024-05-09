@@ -21,7 +21,8 @@
 #include "soundboard.h"
 #include "config.h"
 
-enum Screen {
+enum Screen
+{
    SCREEN_SOUNDBOARD,
    SCREEN_MENU,
    SCREEN_DEBUG,
@@ -36,18 +37,38 @@ SoundBoard soundBoard;
 
 static bool requestDebugMenu = false;
 
-void toggleBuzzerSounds(uint16_t value) {
-   config.setValue(CFG_BUZZER_ENABLED, !!value);
+#define MAX_TIME_TO_ANSWER 20L
+#define MIN_TIME_TO_ANSWER 1L
+#define STEP_WIDTH(min, max) map(min + 1, min, max, 0, 1000)
+
+void setBuzzerBeepVolume(uint16_t pos)
+{
+   config.setValue(CFG_BUZZER_BEEP_VOLUME, pos / STEP_WIDTH(0, 100)); // 0..1000 => 0..100
+   Serial.printf("changed buzzer beep volume to %d%%\n", config.getValue(CFG_BUZZER_BEEP_VOLUME));
 }
 
-void setBuzzerVolume(uint16_t pos) {
-   config.setValue(CFG_BUZZER_VOLUME, pos / 10);
-   Serial.printf("changed buzzer volume to %d\n", config.getValue(CFG_BUZZER_VOLUME));
+void setBuzzerStartVolume(uint16_t pos)
+{
+   config.setValue(CFG_BUZZER_START_VOLUME, pos / STEP_WIDTH(0, 100)); // 0..1000 => 0..100
+   Serial.printf("changed buzzer start volume to %d%%\n", config.getValue(CFG_BUZZER_START_VOLUME));
 }
 
-void setSoundboardVolume(uint16_t pos) {
-   config.setValue(CFG_SOUNDBOARD_VOLUME, pos / 10);
-   Serial.printf("changed soundboard volume to %d\n",  config.getValue(CFG_SOUNDBOARD_VOLUME));
+void setBuzzerEndVolume(uint16_t pos)
+{
+   config.setValue(CFG_BUZZER_END_VOLUME, pos / STEP_WIDTH(0, 100)); // 0..1000 => 0..100
+   Serial.printf("changed buzzer end volume to %d%%\n", config.getValue(CFG_BUZZER_END_VOLUME));
+}
+
+void setSoundboardVolume(uint16_t pos)
+{
+   config.setValue(CFG_SOUNDBOARD_VOLUME, pos / STEP_WIDTH(0, 100)); // 0..1000 => 0..100
+   Serial.printf("changed soundboard volume to %d%%\n", config.getValue(CFG_SOUNDBOARD_VOLUME));
+}
+
+void setTimeToAnswer(uint16_t pos)
+{
+   config.setValue(CFG_TIME_TO_ANSWER, pos / STEP_WIDTH(MIN_TIME_TO_ANSWER, MAX_TIME_TO_ANSWER)); // 0..1000 => 1..20
+   Serial.printf("changed time to answer to %us\n", config.getValue(CFG_TIME_TO_ANSWER));
 }
 
 void callbackDebugMenu()
@@ -55,27 +76,38 @@ void callbackDebugMenu()
    requestDebugMenu = true;
 }
 
-char* mapToPercent(uint16_t progress) {
-   // Map the progress value to a new range (100 to 200)
+char* mapToPercent(uint16_t progress)
+{
    long mapped = mapProgress(progress, 0, 100L);
-
-   // Buffer to store the converted string
    static char buffer[10];
-
-   // Convert the mapped value to a string
    itoa(mapped, buffer, 10);
-
-   // Concatenate the string with the character 'm'
    concat(buffer, '%', buffer);
-
-   // Return the resulting string
    return buffer;
 }
 
+char* mapToSecond(uint16_t progress)
+{
+   long mapped = mapProgress(progress, 0, 20L);
+   static char buffer[10];
+   itoa(mapped, buffer, 10);
+   concat(buffer, 's', buffer);
+   return buffer;
+}
+
+// Progress items have an internal range of 0..1000
+#define STEP_WIDTH_PERCENT 5
 MAIN_MENU(
-   ITEM_TOGGLE("Buzzer Sounds", "ON", "OFF", toggleBuzzerSounds),
-   ITEM_PROGRESS("Buzzer vol", 500, 50, mapToPercent, setBuzzerVolume),
-   ITEM_PROGRESS("Soundb. vol", 1000, 50, mapToPercent, setSoundboardVolume),
+// Adjust setting the values from config values if altering the order!
+   ITEM_PROGRESS("BzrBeep vol", Config::defaultValue(CFG_BUZZER_BEEP_VOLUME) * STEP_WIDTH(0, 100),
+                 STEP_WIDTH_PERCENT * STEP_WIDTH(0, 100), mapToPercent, setBuzzerBeepVolume),
+   ITEM_PROGRESS("BzrStart vol", Config::defaultValue(CFG_BUZZER_START_VOLUME) * STEP_WIDTH(0, 100),
+                 STEP_WIDTH_PERCENT * STEP_WIDTH(0, 100), mapToPercent, setBuzzerStartVolume),
+   ITEM_PROGRESS("BzrEnd vol", Config::defaultValue(CFG_BUZZER_END_VOLUME) * STEP_WIDTH(0, 100),
+                 STEP_WIDTH_PERCENT * STEP_WIDTH(0, 100), mapToPercent, setBuzzerEndVolume),
+   ITEM_PROGRESS("Soundb. vol", Config::defaultValue(CFG_SOUNDBOARD_VOLUME) * STEP_WIDTH(0, 100),
+                 STEP_WIDTH_PERCENT * STEP_WIDTH(0, 100), mapToPercent, setSoundboardVolume),
+   ITEM_PROGRESS("Answer time", Config::defaultValue(CFG_TIME_TO_ANSWER) * STEP_WIDTH(MIN_TIME_TO_ANSWER, MAX_TIME_TO_ANSWER),
+                 STEP_WIDTH(MIN_TIME_TO_ANSWER, MAX_TIME_TO_ANSWER), mapToSecond, setTimeToAnswer),
    ITEM_COMMAND("Debug", callbackDebugMenu)
 );
 
@@ -131,7 +163,7 @@ void lightFirstBuzzer(bool red, bool blue, bool reset)
    static State state = STATE_WAITING;
    static State prevState = STATE_WAITING;
    static bool lastChoiceSameTime = false;
-   const int timeToAnswerMs = 5000; // todo: parameter
+   int timeToAnswerMs = config.getValue(CFG_TIME_TO_ANSWER) * 1000;
    static uint32_t lastBeepAtTimeLeft = 0;
 
    switch (state)
@@ -164,7 +196,7 @@ void lightFirstBuzzer(bool red, bool blue, bool reset)
             }
 
 
-            soundPlayer.requestPlayback(SOUND_TIMER_START, SOUND_PRIO_BUZZER_START);
+            soundPlayer.requestPlayback(SOUND_TIMER_START, SOUND_PRIO_BUZZER_START, config.getValue(CFG_BUZZER_START_VOLUME));
             lastBeepAtTimeLeft = timeToAnswerMs;
          }
          else
@@ -183,7 +215,7 @@ void lightFirstBuzzer(bool red, bool blue, bool reset)
          auto timeLeft = (int32_t)(timeToAnswerMs - blockedSinceMs);
          if (lastBeepAtTimeLeft - timeLeft > 1000 && timeLeft >= 800)
          {
-            soundPlayer.requestPlayback(SOUND_TIMER_BEEP, SOUND_PRIO_BUZZER_BEEP);
+            soundPlayer.requestPlayback(SOUND_TIMER_BEEP, SOUND_PRIO_BUZZER_BEEP, config.getValue(CFG_BUZZER_BEEP_VOLUME));
             lastBeepAtTimeLeft -= 1000;
          }
 
@@ -199,7 +231,7 @@ void lightFirstBuzzer(bool red, bool blue, bool reset)
             digitalWrite(RED_BUZZER_LED, LOW);
             digitalWrite(BLUE_BUZZER_LED, LOW);
 
-            soundPlayer.requestPlayback(SOUND_TIMER_END, SOUND_PRIO_BUZZER_END);
+            soundPlayer.requestPlayback(SOUND_TIMER_END, SOUND_PRIO_BUZZER_END, config.getValue(CFG_BUZZER_END_VOLUME));
 
             lcd16_2.clear();
             lcd16_2.setCursor(1, 0);
@@ -222,7 +254,8 @@ Screen debugScreen(const InputValues& values, bool enter)
    static uint32_t lastChange = millis();
    static uint32_t lastUpdate = 0;
 
-   if (enter)  {
+   if (enter)
+   {
       lastChange = millis();
       lcd20_4.clear();
    }
@@ -333,9 +366,13 @@ Screen soundBoardScreen(const InputValues& values, bool enter)
          default:
             break;
       }
-      if (fileIndex != -1) {
+      if (fileIndex != -1)
+      {
          std::string filename = soundBoard.getFileName(currentPage, fileIndex);
-         if (!filename.empty()) soundPlayer.requestPlayback(filename, SOUND_PRIO_SOUNDBOARD);
+         if (!filename.empty())
+         {
+            soundPlayer.requestPlayback(filename, SOUND_PRIO_SOUNDBOARD, config.getValue(CFG_SOUNDBOARD_VOLUME));
+         }
       }
    }
 
@@ -344,11 +381,21 @@ Screen soundBoardScreen(const InputValues& values, bool enter)
 
 Screen menuScreen(const InputValues& values, bool enter)
 {
-   if (enter) menu.show();
+   if (enter)
+   {
+      // Load config values to menu - Use indices from MAIN_MENU definition! Index 0 is header
+      mainMenu[1]->setProgress(config.getValue(CFG_BUZZER_BEEP_VOLUME) * STEP_WIDTH(0, 100));
+      mainMenu[2]->setProgress(config.getValue(CFG_BUZZER_START_VOLUME) * STEP_WIDTH(0, 100));
+      mainMenu[3]->setProgress(config.getValue(CFG_BUZZER_END_VOLUME) * STEP_WIDTH(0, 100));
+      mainMenu[4]->setProgress(config.getValue(CFG_SOUNDBOARD_VOLUME) * STEP_WIDTH(0, 100));
+      mainMenu[5]->setProgress(config.getValue(CFG_TIME_TO_ANSWER) * STEP_WIDTH(MIN_TIME_TO_ANSWER, MAX_TIME_TO_ANSWER));
+      menu.show();
+   }
    if (values.lcdBtnChanged)
    {
 
-      switch (values.lcdBtn)   {
+      switch (values.lcdBtn)
+      {
          case BUTTON_NONE:
             break;
          case BUTTON_UP:
@@ -376,7 +423,7 @@ Screen menuScreen(const InputValues& values, bool enter)
             }
             break;
          case BUTTON_RIGHT:
-            menu.right();
+            if (!menu.isInEditMode()) menu.right();
             break;
          case BUTTON_ENTER:
             menu.enter();
@@ -395,8 +442,8 @@ Screen menuScreen(const InputValues& values, bool enter)
    return values.pushBtnChanged ? SCREEN_SOUNDBOARD : SCREEN_MENU;
 }
 
-// return value: should exit the screen
-typedef Screen (*screenFunction)(const InputValues& values, bool enter);
+// return value: next screen
+typedef Screen (* screenFunction)(const InputValues& values, bool enter);
 
 void loop()
 {

@@ -13,10 +13,10 @@
 #define SOUND_TIMER_END  "/buzzer/contdown1_beepHighpitch.wav"
 #define SOUND_TIMER_START  "/buzzer/ding.wav"
 
-#define SOUND_PRIO_BUZZER_START 2
+#define SOUND_PRIO_BUZZER_START 3
 #define SOUND_PRIO_BUZZER_BEEP 2
-#define SOUND_PRIO_BUZZER_END 2
-#define SOUND_PRIO_SOUNDBOARD 1
+#define SOUND_PRIO_BUZZER_END 1
+#define SOUND_PRIO_SOUNDBOARD 4
 
 class SoundPlayer
 {
@@ -27,7 +27,14 @@ private:
    [[noreturn]] void playbackHandler();
 public:
    void begin();
-   void requestPlayback(const std::string& filename, int prio);
+
+   /**
+    * \brief Request playback of a file
+    * \param filename Filename to be played
+    * \param prio Priority (lower number = higher prio)
+    * \param volume Volume in percent
+    */
+   void requestPlayback(const std::string& filename, int prio, uint8_t volume);
 };
 
 #endif //ESP32_BUZZER_SOUNDS_H
