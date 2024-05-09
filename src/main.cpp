@@ -1,10 +1,12 @@
 #include <Arduino.h>
 #include <Wire.h>
 
+// Other LcdMenu includes have to be before LcdMenu.h include (not sure if I support this design choice...)
 #define USE_STANDARD_LCD
 #include "ItemCommand.h"
 #include "ItemInput.h"
 #include "ItemToggle.h"
+#include "ItemProgress.h"
 #include <LcdMenu.h>
 
 #include <hd44780.h>                       // main hd44780 header
@@ -17,6 +19,14 @@
 #include "esp_log.h"
 #include "inputs.h"
 #include "soundboard.h"
+#include "config.h"
+
+enum Screen {
+   SCREEN_SOUNDBOARD,
+   SCREEN_MENU,
+   SCREEN_DEBUG,
+   SCREEN_COUNT
+};
 
 hd44780_I2Cexp lcd16_2(0x27); // declare lcd object: auto locate & auto config expander chip
 LiquidCrystal lcd20_4(LCD_RS, LCD_E, LCD_D4, LCD_D5, LCD_D6, LCD_D7);
@@ -24,28 +34,58 @@ LcdMenu menu(4, 20);
 SoundPlayer soundPlayer;
 SoundBoard soundBoard;
 
-struct Config {
-   uint8_t buzzerVolume; // 0..100 %
-   uint8_t soundBoardVolume; // 0..100 %
-   bool enableBuzzerSounds;
-};
-Config config;
+static bool requestDebugMenu = false;
 
 void toggleBuzzerSounds(uint16_t value) {
-   config.enableBuzzerSounds = !!value;
+   config.setValue(CFG_BUZZER_ENABLED, !!value);
+}
+
+void setBuzzerVolume(uint16_t pos) {
+   config.setValue(CFG_BUZZER_VOLUME, pos / 10);
+   Serial.printf("changed buzzer volume to %d\n", config.getValue(CFG_BUZZER_VOLUME));
+}
+
+void setSoundboardVolume(uint16_t pos) {
+   config.setValue(CFG_SOUNDBOARD_VOLUME, pos / 10);
+   Serial.printf("changed soundboard volume to %d\n",  config.getValue(CFG_SOUNDBOARD_VOLUME));
+}
+
+void callbackDebugMenu()
+{
+   requestDebugMenu = true;
+}
+
+char* mapToPercent(uint16_t progress) {
+   // Map the progress value to a new range (100 to 200)
+   long mapped = mapProgress(progress, 0, 100L);
+
+   // Buffer to store the converted string
+   static char buffer[10];
+
+   // Convert the mapped value to a string
+   itoa(mapped, buffer, 10);
+
+   // Concatenate the string with the character 'm'
+   concat(buffer, '%', buffer);
+
+   // Return the resulting string
+   return buffer;
 }
 
 MAIN_MENU(
    ITEM_TOGGLE("Buzzer Sounds", "ON", "OFF", toggleBuzzerSounds),
-   ITEM_BASIC("foobar"),
-   ITEM_BASIC("baz"),
-   ITEM_BASIC("ddashdjka"),
-   ITEM_BASIC("blaa")
+   ITEM_PROGRESS("Buzzer vol", 500, 50, mapToPercent, setBuzzerVolume),
+   ITEM_PROGRESS("Soundb. vol", 1000, 50, mapToPercent, setSoundboardVolume),
+   ITEM_COMMAND("Debug", callbackDebugMenu)
 );
+
 
 void setup()
 {
    Serial.begin(115200);
+
+   // Load settings
+   config.load();
 
    menu.setupLcdWithMenu(LCD_RS, LCD_E, LCD_D4, LCD_D5, LCD_D6, LCD_D7, mainMenu);
    menu.hide();
@@ -177,7 +217,7 @@ void lightFirstBuzzer(bool red, bool blue, bool reset)
 }
 
 
-bool debugScreen(const InputValues& values, bool enter)
+Screen debugScreen(const InputValues& values, bool enter)
 {
    static uint32_t lastChange = millis();
    static uint32_t lastUpdate = 0;
@@ -218,17 +258,17 @@ bool debugScreen(const InputValues& values, bool enter)
       lastUpdate = millis();
    }
 
-   return (millis() - lastChange > 3000 && (values.lcdBtnChanged && (values.lcdBtn == BUTTON_UP || values.lcdBtn == BUTTON_DOWN)));
+   return (millis() - lastChange > 5000 && (values.lcdBtnChanged && (values.lcdBtn == BUTTON_LEFT))) ? SCREEN_MENU : SCREEN_DEBUG;
 }
 
 
-bool soundBoardScreen(const InputValues& values, bool enter)
+Screen soundBoardScreen(const InputValues& values, bool enter)
 {
    static int displayPage = -1;
    if (enter) displayPage = -1; // leads to screen update
    static int currentPage = 0;
    int soundBoardPagesCount = soundBoard.getPageCount();
-   if (soundBoardPagesCount == 0) return true;
+   if (soundBoardPagesCount == 0) return SCREEN_MENU;
    if (values.lcdBtnChanged)
    {
       if (values.lcdBtn == BUTTON_LEFT)
@@ -299,25 +339,41 @@ bool soundBoardScreen(const InputValues& values, bool enter)
       }
    }
 
-   return values.lcdBtnChanged && (values.lcdBtn == BUTTON_UP || values.lcdBtn == BUTTON_DOWN);
+   return (values.lcdBtnChanged && (values.lcdBtn == BUTTON_UP || values.lcdBtn == BUTTON_DOWN) ? SCREEN_MENU : SCREEN_SOUNDBOARD);
 }
 
-bool menuScreen(const InputValues& values, bool enter)
+Screen menuScreen(const InputValues& values, bool enter)
 {
    if (enter) menu.show();
    if (values.lcdBtnChanged)
    {
+
       switch (values.lcdBtn)   {
          case BUTTON_NONE:
             break;
          case BUTTON_UP:
-            menu.up();
+            // Change values with up/down instead of left/right as we use left as back button
+            if (menu.isInEditMode())
+            {
+               menu.right();
+            }
+            else
+            {
+               menu.up();
+            }
             break;
          case BUTTON_LEFT:
             menu.back();
             break;
          case BUTTON_DOWN:
-            menu.down();
+            if (menu.isInEditMode())
+            {
+               menu.left();
+            }
+            else
+            {
+               menu.down();
+            }
             break;
          case BUTTON_RIGHT:
             menu.right();
@@ -330,29 +386,34 @@ bool menuScreen(const InputValues& values, bool enter)
       }
    }
 
-   return values.pushBtnChanged;
+   if (requestDebugMenu)
+   {
+      requestDebugMenu = false;
+      return SCREEN_DEBUG;
+   }
+
+   return values.pushBtnChanged ? SCREEN_SOUNDBOARD : SCREEN_MENU;
 }
 
 // return value: should exit the screen
-typedef bool (*screenFunction)(const InputValues& values, bool enter);
+typedef Screen (*screenFunction)(const InputValues& values, bool enter);
 
 void loop()
 {
    static InputValues values = {};
    getInputValues(values);
 
-   screenFunction screenFunctions[] = {
+   // Make sure to keep it in synch with the enum
+   screenFunction screenFunctions[SCREEN_COUNT] = {
       soundBoardScreen,
-      debugScreen,
       menuScreen,
+      debugScreen,
    };
-   static uint32_t screen = 0;
-   static uint32_t prevScreen = UINT32_MAX;
-   bool leaveScreen = screenFunctions[screen](values, prevScreen != screen);
+   static Screen screen = SCREEN_SOUNDBOARD;
+   static Screen prevScreen = SCREEN_COUNT;
+   bool changed = prevScreen != screen;
    prevScreen = screen;
-   if (leaveScreen) {
-      screen = (screen + 1) % (sizeof(screenFunctions) / sizeof (screenFunctions[0]));
-   }
+   screen = screenFunctions[screen](values, changed);
 
    lightFirstBuzzer(values.isRedBuzzerPressed, values.isBlueBuzzerPressed, values.lcdBtn == BUTTON_LEFT);
 
