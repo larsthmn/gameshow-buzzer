@@ -77,8 +77,8 @@ void SoundPlayer::requestPlayback(const std::string& filename, int prio, uint8_t
                {
                   break;
                }
-               // Cancel by higher prio playback
-               if (currentRequest.prio < currentPrio) {
+               // Cancel by higher or same prio playback
+               if (currentRequest.prio <= currentPrio) {
                   Serial.printf("current playback cancelled by other playback\n");
                   goto play; // i know you shouldn't but hee hee
                }
