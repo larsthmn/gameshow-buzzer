@@ -13,6 +13,16 @@
 #include "config.h"
 #include "screens/screens.h"
 
+#define RUN_FTP 1
+
+#if RUN_FTP
+#include <WiFi.h>
+#include "ESP-FTP-Server-Lib.h"
+#include "credentials.h"
+
+FTPServer ftp;
+#endif
+
 hd44780_I2Cexp lcd16_2(0x27); // declare lcd object: auto locate & auto config expander chip
 ScreenManager screens;
 
@@ -47,6 +57,20 @@ void setup()
    analogSetAttenuation(ADC_6db);
 
    screens.init();
+
+#if RUN_FTP
+   // login into WiFi
+   // Change needed!
+   WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
+   while (WiFi.status() != WL_CONNECTED) {
+      delay(10);
+   }
+   Serial.println("Connected to Wifi!");
+
+   ftp.addUser(FTP_USER, FTP_PASSWORD);
+   ftp.addFilesystem("SD", &SD);
+   ftp.begin();
+#endif
 }
 
 
@@ -149,6 +173,10 @@ void lightFirstBuzzer(bool red, bool blue, bool reset)
 
 void loop()
 {
+#if RUN_FTP
+   ftp.handle();
+#endif
+
    static InputValues values = {};
    getInputValues(values);
 
