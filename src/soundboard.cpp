@@ -116,6 +116,10 @@ int SoundBoard::getFileCount(int pageIndex)
 
 std::string SoundBoard::getPageName(int index)
 {
+   if (index >= pages.size())
+   {
+      return "";
+   }
    return pages[index].name;
 }
 
