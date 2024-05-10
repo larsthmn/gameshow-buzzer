@@ -13,7 +13,7 @@
 #include "config.h"
 #include "screens/screens.h"
 
-#define RUN_FTP 1
+#define RUN_FTP 0
 
 #if RUN_FTP
 #include <WiFi.h>
@@ -179,23 +179,35 @@ void lightFirstBuzzer(bool red, bool blue, bool reset)
 void randomSound() {
    static uint32_t clearDisplayAt = 0;
    static uint32_t nextPlay = 0;
-   if (millis() >= nextPlay)
+
+   if (config.hasChanged(CFG_SOUND_RANDOM_PERIOD) || config.hasChanged(CFG_SOUND_RANDOM_ADD))
    {
-      if (nextPlay != 0) soundPlayer.requestPlayback(SOUND_RANDOM, SOUND_PRIO_RANDOM, config.getValue(CFG_SOUND_RANDOM_VOLUME));
+      Serial.println("Reinit random sounds due to config change");
+      config.resetHasChanged(CFG_SOUND_RANDOM_PERIOD);
+      config.resetHasChanged(CFG_SOUND_RANDOM_ADD);
+      nextPlay = 0; // re-init
+   }
+
+   if (millis() >= nextPlay && config.getValue(CFG_SOUND_RANDOM_PERIOD) != 0)
+   {
+      if (nextPlay != 0) {
+         Serial.println("Play random sound");
+         soundPlayer.requestPlayback(SOUND_RANDOM, SOUND_PRIO_RANDOM, config.getValue(CFG_SOUND_RANDOM_VOLUME));
+
+         lastDisplayFunction = DISPLAY_RANDOM;
+         lcd16_2.clear();
+         lcd16_2.setCursor(0, 0);
+         lcd16_2.write("Schüttet was in");
+         lcd16_2.setCursor(0, 1);
+         lcd16_2.write("eure Fressluke!");
+         clearDisplayAt = millis() + 30000;
+      }
       int32_t periodMs = config.getValue(CFG_SOUND_RANDOM_PERIOD) * 60 * 1000L;
       int32_t randomOffsetMs = random(0, config.getValue(CFG_SOUND_RANDOM_ADD) * 60 * 1000L);
       int32_t nextOffset = max(5000, periodMs + randomOffsetMs);
       nextPlay = millis() + nextOffset;
-      Serial.printf("Random sound! Next one in %.2fs (%.2fs + %.2fs)\n", nextOffset / 1000.0, periodMs / 1000.0,
+      Serial.printf("Next random sound in %.2fs (%.2fs + %.2fs)\n", nextOffset / 1000.0, periodMs / 1000.0,
                     randomOffsetMs / 1000.0);
-
-
-      lastDisplayFunction = DISPLAY_RANDOM;
-      lcd16_2.clear();
-      lcd16_2.setCursor(0, 0);
-      lcd16_2.write("Schüttet was in");
-      lcd16_2.setCursor(0, 1);
-      lcd16_2.write("eure Fressluke!");
    }
 
    if (clearDisplayAt != 0 && millis() > clearDisplayAt)
@@ -204,10 +216,10 @@ void randomSound() {
       if (lastDisplayFunction == DISPLAY_RANDOM)
       {
          lcd16_2.clear();
-         lcd16_2.setCursor(1, 0);
-         lcd16_2.write("Ok weiter ");
-         lcd16_2.setCursor(2, 1);
-         lcd16_2.write("geht's!");
+         lcd16_2.setCursor(2, 0);
+         lcd16_2.write("Vielen Dank,");
+         lcd16_2.setCursor(0, 1);
+         lcd16_2.write("gerne wieder! 5*");
       }
       clearDisplayAt = 0;
    }

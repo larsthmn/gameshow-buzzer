@@ -34,6 +34,7 @@ struct ConfigDefinition
 class Config {
 private:
    int values[CFG_COUNT];
+   bool valuesChanged[CFG_COUNT] = { false};
 
 public:
    int getValue(ConfigValue cfg)
@@ -45,9 +46,20 @@ public:
    {
       if (values[cfg] != value)
       {
+         valuesChanged[cfg] = true;
          values[cfg] = value;
          save();
       }
+   }
+
+   bool hasChanged(ConfigValue cfg) {
+      bool ret = valuesChanged[cfg];
+      valuesChanged[cfg] = false;
+      return ret;
+   }
+
+   void resetHasChanged(ConfigValue cfg) {
+      valuesChanged[cfg] = false;
    }
 
    void save();
