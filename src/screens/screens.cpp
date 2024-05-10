@@ -11,8 +11,8 @@
 void ScreenManager::init()
 {
    display.begin(20, 4);
-   menu_init();
-   soundBoardScreen_init();
+   menuInit();
+   soundBoardScreenInit();
 }
 
 void ScreenManager::loop(const InputValues& values)

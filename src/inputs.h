@@ -50,4 +50,6 @@ extern const char* ButtonTypeStr[BUTTON_TYPES_COUNT];
  */
 void getInputValues(InputValues& values);
 
+void inputsInit();
+
 #endif //ESP32_BUZZER_INPUTS_H

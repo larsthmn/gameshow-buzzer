@@ -14,7 +14,21 @@ enum ConfigValue {
    CFG_BUZZER_END_VOLUME,
    CFG_SOUNDBOARD_VOLUME,
    CFG_TIME_TO_ANSWER,
+   CFG_SOUND_RANDOM_PERIOD,
+   CFG_SOUND_RANDOM_ADD,
+   CFG_SOUND_RANDOM_VOLUME,
    CFG_COUNT
+};
+
+struct ConfigDefinition
+{
+   ConfigValue value;
+   const char* key;
+   int defaultValue;
+   int min;
+   int max;
+   const char* unit;
+   const char* name;
 };
 
 class Config {
@@ -36,12 +50,11 @@ public:
       }
    }
 
-   static int defaultValue(ConfigValue cfg);
-
    void save();
    void load();
 };
 
 extern Config config;
+extern const ConfigDefinition configDef[CFG_COUNT];
 
 #endif //ESP32_BUZZER_CONFIG_H

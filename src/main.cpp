@@ -25,6 +25,12 @@ FTPServer ftp;
 
 hd44780_I2Cexp lcd16_2(0x27); // declare lcd object: auto locate & auto config expander chip
 ScreenManager screens;
+enum LastDisplayFunction {
+   DISPLAY_BUZZER,
+   DISPLAY_RANDOM,
+   DISPLAY_INIT
+};
+static LastDisplayFunction lastDisplayFunction = DISPLAY_INIT;
 
 void setup()
 {
@@ -40,21 +46,19 @@ void setup()
    pinMode(RED_LED_PIN, OUTPUT);
    pinMode(RED_BUZZER_LED, OUTPUT);
    pinMode(BLUE_BUZZER_LED, OUTPUT);
-   pinMode(BLUE_BUZZER_INPUT, INPUT);
-   pinMode(RED_BUZZER_INPUT, INPUT);
 
    // Load settings
    config.load();
 
    lcd16_2.begin(16, 2);
-   lcd16_2.setCursor(2, 0);   //Set cursor to character 2 on line 0
-   lcd16_2.print("Myje stinkt!");
-   lcd16_2.setCursor(2, 1);   //Move cursor to character 2 on line 1
+   lcd16_2.setCursor(2, 0);
+   lcd16_2.print("Myje stinkt");
+   lcd16_2.setCursor(5, 1);
    lcd16_2.print("LOL");
 
    soundPlayer.begin();
 
-   analogSetAttenuation(ADC_6db);
+   inputsInit();
 
    screens.init();
 
@@ -102,6 +106,7 @@ void lightFirstBuzzer(bool red, bool blue, bool reset)
                chooseRed = !lastChoiceSameTime;
                lastChoiceSameTime = chooseRed;
             }
+            lastDisplayFunction = DISPLAY_BUZZER;
             lcd16_2.clear();
             lcd16_2.setCursor(0, 0);
             if (chooseRed)
@@ -141,7 +146,7 @@ void lightFirstBuzzer(bool red, bool blue, bool reset)
             lastBeepAtTimeLeft -= 1000;
          }
 
-
+         lastDisplayFunction = DISPLAY_BUZZER;
          lcd16_2.setCursor(1, 1);
          lcd16_2.print("Timer: ");
          lcd16_2.print((timeLeft) / 1000.0, 1);
@@ -155,6 +160,7 @@ void lightFirstBuzzer(bool red, bool blue, bool reset)
 
             soundPlayer.requestPlayback(SOUND_TIMER_END, SOUND_PRIO_BUZZER_END, config.getValue(CFG_BUZZER_END_VOLUME));
 
+            lastDisplayFunction = DISPLAY_BUZZER;
             lcd16_2.clear();
             lcd16_2.setCursor(1, 0);
             lcd16_2.print("Buzzer offen!");
@@ -170,6 +176,43 @@ void lightFirstBuzzer(bool red, bool blue, bool reset)
    prevState = state;
 }
 
+void randomSound() {
+   static uint32_t clearDisplayAt = 0;
+   static uint32_t nextPlay = 0;
+   if (millis() >= nextPlay)
+   {
+      if (nextPlay != 0) soundPlayer.requestPlayback(SOUND_RANDOM, SOUND_PRIO_RANDOM, config.getValue(CFG_SOUND_RANDOM_VOLUME));
+      int32_t periodMs = config.getValue(CFG_SOUND_RANDOM_PERIOD) * 60 * 1000L;
+      int32_t randomOffsetMs = random(0, config.getValue(CFG_SOUND_RANDOM_ADD) * 60 * 1000L);
+      int32_t nextOffset = max(5000, periodMs + randomOffsetMs);
+      nextPlay = millis() + nextOffset;
+      Serial.printf("Random sound! Next one in %.2fs (%.2fs + %.2fs)\n", nextOffset / 1000.0, periodMs / 1000.0,
+                    randomOffsetMs / 1000.0);
+
+
+      lastDisplayFunction = DISPLAY_RANDOM;
+      lcd16_2.clear();
+      lcd16_2.setCursor(0, 0);
+      lcd16_2.write("Schüttet was in");
+      lcd16_2.setCursor(0, 1);
+      lcd16_2.write("eure Fressluke!");
+   }
+
+   if (clearDisplayAt != 0 && millis() > clearDisplayAt)
+   {
+      // Only clear display if nothing else has written something there in between
+      if (lastDisplayFunction == DISPLAY_RANDOM)
+      {
+         lcd16_2.clear();
+         lcd16_2.setCursor(1, 0);
+         lcd16_2.write("Ok weiter ");
+         lcd16_2.setCursor(2, 1);
+         lcd16_2.write("geht's!");
+      }
+      clearDisplayAt = 0;
+   }
+}
+
 
 void loop()
 {
@@ -182,7 +225,9 @@ void loop()
 
    screens.loop(values);
 
-   lightFirstBuzzer(values.isRedBuzzerPressed, values.isBlueBuzzerPressed, values.lcdBtn == BUTTON_LEFT);
+   lightFirstBuzzer(values.isRedBuzzerPressed, values.isBlueBuzzerPressed, false);
+
+   randomSound();
 
    delay(5);
 }

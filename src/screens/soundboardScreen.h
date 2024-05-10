@@ -9,6 +9,6 @@
 #include <LiquidCrystal.h>
 
 Screen soundBoardScreen(const InputValues& values, LiquidCrystal& lcd, bool enter);
-void soundBoardScreen_init();
+void soundBoardScreenInit();
 
 #endif //ESP32_BUZZER_SOUNDBOARDSCREEN_H

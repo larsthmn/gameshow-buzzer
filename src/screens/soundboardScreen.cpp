@@ -204,7 +204,7 @@ Screen soundBoardScreen(const InputValues& values, LiquidCrystal& lcd, bool ente
    return (values.lcdBtnChanged && (values.lcdBtn == BUTTON_UP || values.lcdBtn == BUTTON_DOWN) ? SCREEN_MENU : SCREEN_SOUNDBOARD);
 }
 
-void soundBoardScreen_init()
+void soundBoardScreenInit()
 {
    soundBoard.begin();
 }

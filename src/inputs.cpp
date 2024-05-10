@@ -136,3 +136,11 @@ void getInputValues(InputValues& values)
    values.lcdBtn = lcdBtn;
 }
 
+void inputsInit()
+{
+   pinMode(LCD_BUTTONS_ANALOG_PIN, ANALOG);
+   pinMode(PUSH_BUTTONS_ANALOG_PIN, ANALOG);
+   pinMode(BLUE_BUZZER_INPUT, INPUT);
+   pinMode(RED_BUZZER_INPUT, INPUT);
+   analogSetAttenuation(ADC_6db);
+}

@@ -8,7 +8,7 @@
 #include "screens.h"
 #include <LiquidCrystal.h>
 
-void menu_init();
+void menuInit();
 Screen menuScreen(const InputValues& values, LiquidCrystal& lcd, bool enter);;
 
 #endif //ESP32_BUZZER_MENU_H
