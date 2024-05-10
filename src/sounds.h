@@ -8,9 +8,8 @@
 #include <string>
 #include <Arduino.h>
 
-#define SOUND_TIMER_BEEP "/buzzer/contdown1_beep.wav"
-//#define SOUND_TIMER_END  "/soundboard/3_Divers 2/1_AnzeigBel_anzeigenhauptmeister-das-gibt-ne-anzeige-wegen-beleidigung.wav"
-#define SOUND_TIMER_END  "/buzzer/contdown1_beepHighpitch.wav"
+#define SOUND_TIMER_BEEP "/buzzer/countdown_beep_short.wav"
+#define SOUND_TIMER_END  "/buzzer/countdown_beep_long.wav"
 #define SOUND_TIMER_START  "/buzzer/ding.wav"
 
 #define SOUND_PRIO_BUZZER_START 3
