@@ -14,8 +14,8 @@
 #define SOUND_RANDOM  "/soundboard/2_Divers 1/1_Egon_ReinInDieFutterluke.wav"
 
 #define SOUND_PRIO_BUZZER_START 3
-#define SOUND_PRIO_BUZZER_BEEP 2
-#define SOUND_PRIO_BUZZER_END 1
+#define SOUND_PRIO_BUZZER_BEEP 5
+#define SOUND_PRIO_BUZZER_END 5
 #define SOUND_PRIO_SOUNDBOARD 4
 #define SOUND_PRIO_RANDOM 4
 

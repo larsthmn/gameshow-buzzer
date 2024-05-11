@@ -185,15 +185,17 @@ void randomSound() {
    static uint32_t clearDisplayAt = 0;
    static uint32_t nextPlay = 0;
 
-   if (config.hasChanged(CFG_SOUND_RANDOM_PERIOD) || config.hasChanged(CFG_SOUND_RANDOM_ADD))
+   if (config.hasChanged(CFG_SOUND_RANDOM_PERIOD) || config.hasChanged(CFG_SOUND_RANDOM_ADD)
+       || config.hasChanged(CFG_SOUND_RANDOM_ENABLE))
    {
       Serial.println("Reinit random sounds due to config change");
       config.resetHasChanged(CFG_SOUND_RANDOM_PERIOD);
       config.resetHasChanged(CFG_SOUND_RANDOM_ADD);
+      config.resetHasChanged(CFG_SOUND_RANDOM_ENABLE);
       nextPlay = 0; // re-init
    }
 
-   if (millis() >= nextPlay && config.getValue(CFG_SOUND_RANDOM_PERIOD) != 0)
+   if (millis() >= nextPlay && config.getValue(CFG_SOUND_RANDOM_ENABLE))
    {
       if (nextPlay != 0) {
          Serial.println("Play random sound");

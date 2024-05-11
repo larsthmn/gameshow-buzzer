@@ -32,17 +32,24 @@ static void callbackRefreshSoundboard()
 
 char* mapToConfig(uint16_t progress, ConfigValue cfg)
 {
-   long mapped = mapProgress(progress, (long)configDef[cfg].min, (long)configDef[cfg].max);
+   int mapped = (int)round(mapProgress(progress, (float)configDef[cfg].min, (float)configDef[cfg].max));
    static char buffer[16];
    itoa(mapped, buffer, 10);
    concat(buffer, configDef[cfg].unit, buffer);
    return buffer;
 }
 
-static void setConfig(uint16_t pos, ConfigValue cfg)
+static void setConfigInt(uint16_t pos, ConfigValue cfg)
 {
-   config.setValue(cfg, pos / STEP_WIDTH(configDef[cfg].min, configDef[cfg].max));
+   int mapped = (int)round(mapProgress(pos, (float)configDef[cfg].min, (float)configDef[cfg].max));
+   config.setValue(cfg, mapped);
    Serial.printf("changed %s to %u%s\n", configDef[cfg].name, config.getValue(cfg), configDef[cfg].unit);
+}
+
+static void setConfigBool(uint16_t pos, ConfigValue cfg)
+{
+   config.setValue(cfg, !!pos);
+   Serial.printf("changed %s to %s\n", configDef[cfg].name, pos ? "on" : "off");
 }
 
 #define ITEM_CONFIG_PROGRESS(text, cfg, stepwidth)  \
@@ -50,12 +57,15 @@ static void setConfig(uint16_t pos, ConfigValue cfg)
                      configDef[cfg].defaultValue * STEP_WIDTH(configDef[cfg].min, configDef[cfg].max), \
                      stepwidth * STEP_WIDTH(configDef[cfg].min, configDef[cfg].max),                   \
                      [](uint16_t prog){ return mapToConfig(prog, cfg);},                                        \
-                     [](uint16_t prog){setConfig(prog, cfg);})
+                     [](uint16_t prog){setConfigInt(prog, cfg);})
 
+
+#define ITEM_CONFIG_TOGGLE(text, cfg)  \
+      ITEM_TOGGLE(text, "AN", "AUS", [](uint16_t prog){setConfigBool(prog, cfg);})
 
 // Progress items have an internal range of 0..1000
 MAIN_MENU(
-   // Make sure this is exactly the order of the enum (values are loaded in a loop to the entries)
+// Make sure this is exactly the order of the enum (values are loaded in a loop to the entries)
    ITEM_CONFIG_PROGRESS(configDef[CFG_BUZZER_BEEP_VOLUME].name, CFG_BUZZER_BEEP_VOLUME, 5),
    ITEM_CONFIG_PROGRESS(configDef[CFG_BUZZER_START_VOLUME].name, CFG_BUZZER_START_VOLUME, 5),
    ITEM_CONFIG_PROGRESS(configDef[CFG_BUZZER_END_VOLUME].name, CFG_BUZZER_END_VOLUME, 5),
@@ -64,6 +74,7 @@ MAIN_MENU(
    ITEM_CONFIG_PROGRESS(configDef[CFG_SOUND_RANDOM_PERIOD].name, CFG_SOUND_RANDOM_PERIOD, 1),
    ITEM_CONFIG_PROGRESS(configDef[CFG_SOUND_RANDOM_ADD].name, CFG_SOUND_RANDOM_ADD, 1),
    ITEM_CONFIG_PROGRESS(configDef[CFG_SOUND_RANDOM_VOLUME].name, CFG_SOUND_RANDOM_VOLUME, 5),
+   ITEM_CONFIG_TOGGLE(configDef[CFG_SOUND_RANDOM_ENABLE].name, CFG_SOUND_RANDOM_ENABLE),
    ITEM_COMMAND("Debug", callbackDebugMenu),
    ITEM_COMMAND("Refresh soundboard", callbackRefreshSoundboard)
 );
@@ -84,8 +95,14 @@ Screen menuScreen(const InputValues& values, LiquidCrystal& lcd, bool enter)
       for (int i = 0; i < static_cast<int>(ConfigValue::CFG_COUNT); ++i)
       {
          auto cfg = static_cast<ConfigValue>(i);
-         mainMenu[i + 1]->setProgress(config.getValue(cfg) * STEP_WIDTH(configDef[i].min, configDef[i].max));
-
+         if (configDef[cfg].type == CFG_TYPE_INT)
+         {
+            mainMenu[i + 1]->setProgress(config.getValue(cfg) * STEP_WIDTH(configDef[i].min, configDef[i].max));
+         }
+         else
+         {
+            mainMenu[i + 1]->setIsOn(config.getValue(cfg));
+         }
       }
       menu.show();
    }

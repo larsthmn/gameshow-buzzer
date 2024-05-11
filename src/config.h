@@ -17,12 +17,20 @@ enum ConfigValue {
    CFG_SOUND_RANDOM_PERIOD,
    CFG_SOUND_RANDOM_ADD,
    CFG_SOUND_RANDOM_VOLUME,
+   CFG_SOUND_RANDOM_ENABLE,
    CFG_COUNT
+};
+
+enum ConfigType
+{
+   CFG_TYPE_INT,
+   CFG_TYPE_BOOL
 };
 
 struct ConfigDefinition
 {
    ConfigValue value;
+   ConfigType type;
    const char* key;
    int defaultValue;
    int min;
