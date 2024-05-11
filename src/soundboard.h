@@ -15,6 +15,8 @@ private:
    size_t descriptionStart, descriptionEnd;
 
 public:
+   SoundBoardSound() : descriptionStart(0), descriptionEnd(0) {}
+
    SoundBoardSound(std::string& filen, size_t start, size_t end)
       : filename(std::move(filen)), descriptionStart(start), descriptionEnd(end)
    {
@@ -32,8 +34,7 @@ public:
 struct SoundBoardPage
 {
    std::string name;
-   std::vector<SoundBoardSound> files;
-   int index;
+   SoundBoardSound files[6];
 };
 
 class SoundBoard

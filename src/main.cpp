@@ -13,7 +13,7 @@
 #include "config.h"
 #include "screens/screens.h"
 
-#define RUN_FTP 0
+#define RUN_FTP 1
 
 #if RUN_FTP
 #include <WiFi.h>
@@ -50,12 +50,6 @@ void setup()
    // Load settings
    config.load();
 
-   lcd16_2.begin(16, 2);
-   lcd16_2.setCursor(2, 0);
-   lcd16_2.print("Myje stinkt");
-   lcd16_2.setCursor(5, 1);
-   lcd16_2.print("LOL");
-
    soundPlayer.begin();
 
    inputsInit();
@@ -66,6 +60,11 @@ void setup()
    // login into WiFi
    // Change needed!
    WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
+   lcd16_2.clear();
+   lcd16_2.setCursor(1, 0);
+   lcd16_2.write("Connecting to");
+   lcd16_2.setCursor(1, 1);
+   lcd16_2.write("WiFi");
    while (WiFi.status() != WL_CONNECTED) {
       delay(10);
    }
@@ -75,6 +74,12 @@ void setup()
    ftp.addFilesystem("SD", &SD);
    ftp.begin();
 #endif
+
+   lcd16_2.begin(16, 2);
+   lcd16_2.setCursor(2, 0);
+   lcd16_2.print("Myje stinkt");
+   lcd16_2.setCursor(5, 1);
+   lcd16_2.print("LOL");
 }
 
 
@@ -197,7 +202,7 @@ void randomSound() {
          lastDisplayFunction = DISPLAY_RANDOM;
          lcd16_2.clear();
          lcd16_2.setCursor(0, 0);
-         lcd16_2.write("Schüttet was in");
+         lcd16_2.write("Schuettet was in");
          lcd16_2.setCursor(0, 1);
          lcd16_2.write("eure Fressluke!");
          clearDisplayAt = millis() + 30000;

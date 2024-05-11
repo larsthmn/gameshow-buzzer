@@ -11,7 +11,7 @@
 #define SOUND_TIMER_BEEP "/buzzer/countdown_beep_short.wav"
 #define SOUND_TIMER_END  "/buzzer/countdown_beep_long.wav"
 #define SOUND_TIMER_START  "/buzzer/ding.wav"
-#define SOUND_RANDOM  "/soundboard/0_Divers 1/6_Egon_ReinInDieFutterluke.wav"
+#define SOUND_RANDOM  "/soundboard/2_Divers 1/1_Egon_ReinInDieFutterluke.wav"
 
 #define SOUND_PRIO_BUZZER_START 3
 #define SOUND_PRIO_BUZZER_BEEP 2
