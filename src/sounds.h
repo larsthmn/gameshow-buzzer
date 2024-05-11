@@ -17,7 +17,7 @@
 #define SOUND_PRIO_BUZZER_BEEP 5
 #define SOUND_PRIO_BUZZER_END 5
 #define SOUND_PRIO_SOUNDBOARD 4
-#define SOUND_PRIO_RANDOM 4
+#define SOUND_PRIO_RANDOM 6
 
 class SoundPlayer
 {

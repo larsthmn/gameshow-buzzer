@@ -31,6 +31,7 @@ enum LastDisplayFunction {
    DISPLAY_INIT
 };
 static LastDisplayFunction lastDisplayFunction = DISPLAY_INIT;
+static bool ftpIsInit = false;
 
 void setup()
 {
@@ -58,21 +59,7 @@ void setup()
 
 #if RUN_FTP
    // login into WiFi
-   // Change needed!
    WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
-   lcd16_2.clear();
-   lcd16_2.setCursor(1, 0);
-   lcd16_2.write("Connecting to");
-   lcd16_2.setCursor(1, 1);
-   lcd16_2.write("WiFi");
-   while (WiFi.status() != WL_CONNECTED) {
-      delay(10);
-   }
-   Serial.println("Connected to Wifi!");
-
-   ftp.addUser(FTP_USER, FTP_PASSWORD);
-   ftp.addFilesystem("SD", &SD);
-   ftp.begin();
 #endif
 
    lcd16_2.begin(16, 2);
@@ -236,7 +223,19 @@ void randomSound() {
 void loop()
 {
 #if RUN_FTP
-   ftp.handle();
+   if (!ftpIsInit && WiFi.status() == WL_CONNECTED)
+   {
+      Serial.println("Connected to Wifi + init FTP");
+      ftp.addUser(FTP_USER, FTP_PASSWORD);
+      ftp.addFilesystem("SD", &SD);
+      ftp.begin();
+      ftpIsInit = true;
+   }
+
+   if (ftpIsInit)
+   {
+      ftp.handle();
+   }
 #endif
 
    static InputValues values = {};
