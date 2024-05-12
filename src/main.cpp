@@ -13,7 +13,7 @@
 #include "config.h"
 #include "screens/screens.h"
 
-#define RUN_FTP 1
+#define RUN_FTP 0
 
 #if RUN_FTP
 #include <WiFi.h>
@@ -171,6 +171,8 @@ void lightFirstBuzzer(bool red, bool blue, bool reset)
 void randomSound() {
    static uint32_t clearDisplayAt = 0;
    static uint32_t nextPlay = 0;
+   const char* randomSounds[] = SOUNDS_RANDOM;
+   const int numberOfSounds = sizeof(randomSounds) / sizeof(randomSounds[0]);
 
    if (config.hasChanged(CFG_SOUND_RANDOM_PERIOD) || config.hasChanged(CFG_SOUND_RANDOM_ADD)
        || config.hasChanged(CFG_SOUND_RANDOM_ENABLE))
@@ -186,7 +188,8 @@ void randomSound() {
    {
       if (nextPlay != 0) {
          Serial.println("Play random sound");
-         soundPlayer.requestPlayback(SOUND_RANDOM, SOUND_PRIO_RANDOM, config.getValue(CFG_SOUND_RANDOM_VOLUME));
+         soundPlayer.requestPlayback(randomSounds[config.getValue(CFG_SOUND_RANDOM_SELECTION) % numberOfSounds], SOUND_PRIO_RANDOM,
+                                     config.getValue(CFG_SOUND_RANDOM_VOLUME));
 
          lastDisplayFunction = DISPLAY_RANDOM;
          lcd16_2.clear();

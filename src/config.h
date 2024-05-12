@@ -7,8 +7,10 @@
 #define ESP32_BUZZER_CONFIG_H
 
 #include <cstdint>
+#include <Arduino.h>
 
-enum ConfigValue {
+enum ConfigValue
+{
    CFG_BUZZER_BEEP_VOLUME,
    CFG_BUZZER_START_VOLUME,
    CFG_BUZZER_END_VOLUME,
@@ -18,6 +20,7 @@ enum ConfigValue {
    CFG_SOUND_RANDOM_ADD,
    CFG_SOUND_RANDOM_VOLUME,
    CFG_SOUND_RANDOM_ENABLE,
+   CFG_SOUND_RANDOM_SELECTION,
    CFG_COUNT
 };
 
@@ -39,10 +42,13 @@ struct ConfigDefinition
    const char* name;
 };
 
-class Config {
+extern const ConfigDefinition configDef[CFG_COUNT];
+
+class Config
+{
 private:
    int values[CFG_COUNT];
-   bool valuesChanged[CFG_COUNT] = { false};
+   bool valuesChanged[CFG_COUNT] = { false };
 
 public:
    int getValue(ConfigValue cfg)
@@ -55,26 +61,28 @@ public:
       if (values[cfg] != value)
       {
          valuesChanged[cfg] = true;
-         values[cfg] = value;
+         values[cfg] = max(min(configDef[cfg].max, value), configDef[cfg].min);
          save();
       }
    }
 
-   bool hasChanged(ConfigValue cfg) {
+   bool hasChanged(ConfigValue cfg)
+   {
       bool ret = valuesChanged[cfg];
       valuesChanged[cfg] = false;
       return ret;
    }
 
-   void resetHasChanged(ConfigValue cfg) {
+   void resetHasChanged(ConfigValue cfg)
+   {
       valuesChanged[cfg] = false;
    }
 
    void save();
    void load();
+   void reset();
 };
 
 extern Config config;
-extern const ConfigDefinition configDef[CFG_COUNT];
 
 #endif //ESP32_BUZZER_CONFIG_H

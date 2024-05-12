@@ -11,13 +11,14 @@
 #define SOUND_TIMER_BEEP "/buzzer/countdown_beep_short.wav"
 #define SOUND_TIMER_END  "/buzzer/countdown_beep_long.wav"
 #define SOUND_TIMER_START  "/buzzer/ding.wav"
-#define SOUND_RANDOM  "/soundboard/2_Divers 1/1_Egon_ReinInDieFutterluke.wav"
+#define SOUNDS_RANDOM  {"/egon/kurz.wav", "/egon/komplett.wav"}
+#define SOUNDS_RANDOM_NAMES  {"Kurz", "Lang"}
 
-#define SOUND_PRIO_BUZZER_START 3
-#define SOUND_PRIO_BUZZER_BEEP 5
+#define SOUND_PRIO_BUZZER_START 3 // high enough to stop a soundboard sound
+#define SOUND_PRIO_BUZZER_BEEP 5 // low enough to be stopped by a soundboard sound
 #define SOUND_PRIO_BUZZER_END 5
 #define SOUND_PRIO_SOUNDBOARD 4
-#define SOUND_PRIO_RANDOM 6
+#define SOUND_PRIO_RANDOM 4
 
 class SoundPlayer
 {
