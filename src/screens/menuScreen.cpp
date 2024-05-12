@@ -113,7 +113,7 @@ SUB_MENU(randomSoundMenu, mainMenu,
 
 SUB_MENU(soundboardMenu, mainMenu,
          ITEM_CONFIG_PROGRESS(configDef[CFG_SOUNDBOARD_VOLUME].name, CFG_SOUNDBOARD_VOLUME, 5),
-         ITEM_COMMAND("Soundboard akt.", callbackRefreshSoundboard)
+         ITEM_COMMAND("Soundboard aktual.", callbackRefreshSoundboard)
 );
 
 void menuInit()
