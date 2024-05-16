@@ -7,6 +7,8 @@
 
 #include <cstdint>
 
+#define PUSH_BUTTON_COUNT 6
+
 enum ButtonType
 {
    BUTTON_NONE,
