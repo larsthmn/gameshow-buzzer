@@ -47,7 +47,7 @@ def get_sound_length(file: str) -> (int, int):
         return round(duration // 60), round(duration % 60)
 
 
-def directory_excel_generator(root_dir, output_file):
+def directory_excel_generator(root_dir: str, output_file: str, flat: bool = False, add_duration: bool = False):
     # Define colors
     colors = ['#FFFF00', '#FF0000', '#000000', '#00FF00', '#000000', '#0000FF']
     symbols = ['⬤', '⬤', '⬤', '⬤', 'ഠ', '⬤']
@@ -62,6 +62,10 @@ def directory_excel_generator(root_dir, output_file):
     color_formats_header = [workbook.add_format({'font_color': clr, 'border': 1, 'bg_color': '#C0C0C0', 'bold': True}) for clr in
                             colors_alt]
     border = workbook.add_format({'border': 1})
+    border_no_right = workbook.add_format({'border': 1})
+    border_no_right.set_right(0)
+    border_no_left = workbook.add_format({'border': 1})
+    border_no_left.set_left(0)
     align_right_border = workbook.add_format({'align': 'right', 'border': 1})
     black = workbook.add_format({'font_color': 'black'})
     black_header = color_formats_header[2]
@@ -96,8 +100,11 @@ def directory_excel_generator(root_dir, output_file):
                 m = re.match(r"(\d+)_([^_.]+)", file)
                 index = int(m.group(1)) - 1
                 name = m.group(2)
-                minutes, sec = get_sound_length(os.path.join(subdir['path'], file))
-                filenames[index] = f'{name} ({minutes}:{sec:02d})'
+
+                filenames[index] = name
+                if add_duration:
+                    minutes, sec = get_sound_length(os.path.join(subdir['path'], file))
+                    filenames[index] += f' ({minutes}:{sec:02d})'
             except (IndexError, NameError, AttributeError):
                 pass
 
@@ -105,33 +112,53 @@ def directory_excel_generator(root_dir, output_file):
         if all([f == "" for f in filenames]):
             continue
 
-        # Calculate number of the current row and column (5 directories in a row)
-        row = (dir_index // TABLES_PER_ROW) * (3 + 2) + ROW_OFFSET  # 2x3 table size with one row padding
-        col = (dir_index % TABLES_PER_ROW) * 3 + COL_OFFSET
-
-        worksheet.merge_range(row, col, row, col + 1, 'will be overwritten', merged_format)
-
+        # Header for page with colored buttons
         seq = get_sequence_for_page(subdir['index'], len(directories), 6)
-        args = []
-        for s in seq:
-            args.append(color_formats_header[s])
-            args.append(symbols_alt[s] + " ")
-        worksheet.write_rich_string(row, col, *args, black_header,
-                                    str(subdir['index'] + 1) + ". " + subdir['name'], black_header)
 
-        worksheet.set_column(col, col + 1, 19)
-        worksheet.set_column(col + 2, col + 2, 2.14)
+        if flat:
+            row = dir_index + ROW_OFFSET
+            col = COL_OFFSET
+            worksheet.write(row, col, str(subdir['index'] + 1) + ". " + subdir['name'], black_header)
+            sequence_richtext = []
+            for s in seq:
+                sequence_richtext.append(coloronly_formats[s])
+                sequence_richtext.append(symbols[s] + " ")
+        else:
+            # Calculate number of the current row and column (5 directories in a row)
+            row = (dir_index // TABLES_PER_ROW) * (3 + 2) + ROW_OFFSET  # 2x3 table size with one row padding
+            col = (dir_index % TABLES_PER_ROW) * 3 + COL_OFFSET
+            worksheet.merge_range(row, col, row, col + 1, 'will be overwritten', merged_format)
+            sequence_richtext = []
+            for s in seq:
+                sequence_richtext.append(color_formats_header[s])
+                sequence_richtext.append(symbols_alt[s] + " ")
+            worksheet.write_rich_string(row, col, *sequence_richtext, black_header,
+                                        str(subdir['index'] + 1) + ". " + subdir['name'], black_header)
+
+        if flat:
+            worksheet.set_column(col, col, 15)
+            for i in range(6):
+                worksheet.set_column(col + 2 * i + 1, col + 2 * i + 1, 6.71)
+                worksheet.set_column(col + 2 * i + 2, col + 2 * i + 2, 13)
+        else:
+            worksheet.set_column(col, col + 1, 19)
+            worksheet.set_column(col + 2, col + 2, 2.14)
 
         for i, filename in enumerate(filenames):
-            if i % 2 == 0:
-                # color first, then file name
-                worksheet.write_rich_string(row + 1 + i // 2, col, coloronly_formats[i], symbols[i] + ' ', black, filename,
-                                            border)
-            else:
-                # file name first, then color
-                worksheet.write_rich_string(row + 1 + i // 2, col + 1, black, filename, coloronly_formats[i], ' ' + symbols[i],
-                                            align_right_border)
-
+            if filename != "":
+                if flat:
+                    # color first, then file name
+                    worksheet.write_rich_string(row, col + 2 * i + 1, *sequence_richtext, coloronly_formats[i], symbols[i], border_no_right)
+                    worksheet.write(row, col + 2 * i + 2, filename, border_no_left)
+                else:
+                    if i % 2 == 0:
+                        # color first, then file name
+                        worksheet.write_rich_string(row + 1 + i // 2, col, coloronly_formats[i], symbols[i] + ' ', black, filename,
+                                                    border)
+                    else:
+                        # file name first, then color
+                        worksheet.write_rich_string(row + 1 + i // 2, col + 1, black, filename, coloronly_formats[i], ' ' + symbols[i],
+                                                    align_right_border)
 
     workbook.close()
     logging.info(f'Successfully created workbook {output_file}')
@@ -141,15 +168,15 @@ def directory_excel_generator(root_dir, output_file):
 
 def main():
     parser = argparse.ArgumentParser(description='Generate Excel from Directory Structure.')
-    parser.add_argument('--dir', type=str, default='../wav/soundboard',
-                        help='Directory to process. ')
-    parser.add_argument('--output', type=str, default='output.xlsx',
-                        help='Output Excel file name. default: output.xlsx')
+    parser.add_argument('--dir', type=str, default='../wav/soundboard', help='Directory to process. ')
+    parser.add_argument('--output', type=str, default='output.xlsx', help='Output Excel file name. default: output.xlsx')
+    parser.add_argument("--flat", action='store_true', help="Make list flat instead of 2x3 tables")
+    parser.add_argument("--add_duration", action='store_true', help="Add sound duration to names")
 
     args = parser.parse_args()
 
     coloredlogs.install(level='INFO', fmt='%(asctime)s - %(levelname)s - %(message)s')
-    directory_excel_generator(args.dir, args.output)
+    directory_excel_generator(args.dir, args.output, args.flat, args.add_duration)
 
 
 def test_get_sequence_for_page():

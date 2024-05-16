@@ -1,4 +1,5 @@
 #include "config.h"
+#include "sounds.h"
 #include <Preferences.h>
 
 static Preferences preferences;
@@ -14,7 +15,7 @@ const ConfigDefinition configDef[CFG_COUNT] = {
    { .value = CFG_SOUND_RANDOM_ADD, .type = CFG_TYPE_INT, .key = "rs-random", .defaultValue = 10, .min = 0, .max = 125, .unit = "min", .name = "RandSnd add" },
    { .value = CFG_SOUND_RANDOM_VOLUME, .type = CFG_TYPE_INT, .key = "rs-vol", .defaultValue = 100, .min = 0, .max = 100, .unit = "%", .name = "RandSnd vol" },
    { .value = CFG_SOUND_RANDOM_ENABLE, .type = CFG_TYPE_BOOL, .key = "rs-en", .defaultValue = 1, .min = 0, .max = 1, .unit = "", .name = "RandSnd en" },
-   { .value = CFG_SOUND_RANDOM_SELECTION, .type = CFG_TYPE_INT, .key = "rs-select", .defaultValue = 0, .min = 0, .max = 2, .unit = "", .name = "RandSnd select" },
+   { .value = CFG_SOUND_RANDOM_SELECTION, .type = CFG_TYPE_INT, .key = "rs-select", .defaultValue = 0, .min = 0, .max = SOUNDS_RANDOM_COUNT - 1, .unit = "", .name = "RandSnd select" },
 };
 
 
