@@ -12,7 +12,7 @@
 #define SOUND_TIMER_END  "/buzzer/countdown_beep_long.wav"
 #define SOUND_TIMER_START  "/buzzer/ding.wav"
 #define SOUNDS_RANDOM  {"/random/egon_kurz.wav", "/random/egon_komplett.wav", "/random/time-for-a-drink.wav"}
-#define SOUNDS_RANDOM_NAMES  {"EgonKurz", "EgonLang", "TimeFDr"}
+#define SOUNDS_RANDOM_NAMES  {"Egon Kurz", "Egon Lang", "TimeForDrink"}
 #define SOUNDS_RANDOM_COUNT  3
 
 #define SOUND_PRIO_BUZZER_START 3 // high enough to stop a soundboard sound
