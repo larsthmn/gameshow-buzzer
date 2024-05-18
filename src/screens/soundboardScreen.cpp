@@ -98,7 +98,7 @@ static std::string getPageDescriptionForSequence(const int* sequences)
    else
    {
       // add one to indices since human beings start counting from 1
-      std::string s = "Page " + std::to_string(minPage + 1) + "-" + std::to_string(maxPage + 1);
+      std::string s = "Page" + std::to_string(minPage + 1) + "-" + std::to_string(maxPage + 1);
       return s;
    }
 }
