@@ -15,6 +15,9 @@ Screen debugScreen(const InputValues& values, LiquidCrystal& lcd, bool enter)
    {
       lastChange = millis();
       lcd.clear();
+      digitalWrite(RED_BUZZER_LED, HIGH);
+      digitalWrite(BLUE_BUZZER_LED, HIGH);
+
    }
 
    if (millis() - lastUpdate > 250)  // updating too fast makes it hard to read
@@ -48,5 +51,15 @@ Screen debugScreen(const InputValues& values, LiquidCrystal& lcd, bool enter)
       lastUpdate = millis();
    }
 
-   return (millis() - lastChange > 5000 && (values.lcdBtnChanged && (values.lcdBtn == BUTTON_LEFT))) ? SCREEN_MENU : SCREEN_DEBUG;
+   bool changeState = millis() - lastChange > 5000 && (values.lcdBtnChanged && (values.lcdBtn == BUTTON_LEFT));
+
+   if (changeState)
+   {
+
+      digitalWrite(RED_BUZZER_LED, LOW);
+      digitalWrite(BLUE_BUZZER_LED, LOW);
+      return SCREEN_MENU;
+   }
+
+   return SCREEN_DEBUG;
 }
