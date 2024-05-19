@@ -7,6 +7,7 @@
 #include "sounds.h"
 #include "config.h"
 
+static const char* TAG = "soundboardScreen";
 SoundBoard soundBoard;
 
 enum SoundboardControlMode
@@ -162,7 +163,7 @@ static void jumpToPageBySequence(const int* pressedButtonSequence, int soundBoar
    if (rc < 0)
    {
       // Invalid sequence, just go back to current sound page
-      Serial.println("Invalid sequence");
+      ESP_LOGW(TAG, "Invalid sequence");
       controlMode = SB_CTRL_SOUNDS; // After selection, go back to sound play mode
    }
    else if (minPage == maxPage)
@@ -176,7 +177,7 @@ static void jumpToPageBySequence(const int* pressedButtonSequence, int soundBoar
       else
       {
          // Invalid page (this should not happen tho)
-         Serial.println("Invalid jump page from sequence");
+         ESP_LOGE(TAG, "Invalid jump page from sequence");
       }
       controlMode = SB_CTRL_SOUNDS; // After selection, go back to sound play mode
    }

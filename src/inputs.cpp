@@ -12,8 +12,9 @@ struct ButtonReading
    uint16_t reading;
 };
 
+static const char* TAG = "inputs";
 // ADC values corresponding to button value
-const ButtonReading lcdButtons[] = {
+static const ButtonReading lcdButtons[] = {
    { BUTTON_NONE,  3626 },
    { BUTTON_UP,    2384 },
    { BUTTON_LEFT,  150 },
@@ -22,7 +23,7 @@ const ButtonReading lcdButtons[] = {
    { BUTTON_ENTER, 1012 },
 };
 
-const ButtonReading pushButtons[] = {
+static const ButtonReading pushButtons[] = {
    { BUTTON_NONE,   3513 },
    { BUTTON_YELLOW, 1643 },
    { BUTTON_RED,    2278 },
@@ -114,12 +115,10 @@ void getInputValues(InputValues& values)
    static ButtonFilter pushBtnFilter = ButtonFilter(pushButtons, sizeof pushButtons / sizeof pushButtons[0]);
    pushBtnFilter.inputValue(values.readingPushButtons);
    ButtonType pushBtn = pushBtnFilter.getButton();
-   values.pushBtnChanged  = values.pushBtn != pushBtn;
+   values.pushBtnChanged = values.pushBtn != pushBtn;
    if (values.pushBtnChanged)
    {
-      Serial.print(ButtonTypeStr[values.pushBtn]);
-      Serial.print("->");
-      Serial.println(ButtonTypeStr[pushBtn]);
+      ESP_LOGD(TAG, "%s -> %s", ButtonTypeStr[values.pushBtn], ButtonTypeStr[pushBtn]);
    }
    values.pushBtn = pushBtn;
 
@@ -129,9 +128,7 @@ void getInputValues(InputValues& values)
    values.lcdBtnChanged = values.lcdBtn != lcdBtn;
    if (values.lcdBtnChanged)
    {
-      Serial.print(ButtonTypeStr[values.lcdBtn]);
-      Serial.print("->");
-      Serial.println(ButtonTypeStr[lcdBtn]);
+      ESP_LOGD(TAG, "%s -> %s", ButtonTypeStr[values.lcdBtn], ButtonTypeStr[lcdBtn]);
    }
    values.lcdBtn = lcdBtn;
 }

@@ -15,6 +15,7 @@
 #include "AudioGeneratorWAV.h"
 #include <Arduino.h>
 
+static const char* TAG = "sounds";
 SoundPlayer soundPlayer;
 
 struct SoundRequest
@@ -58,7 +59,7 @@ void SoundPlayer::requestPlayback(const std::string& filename, int prio, uint8_t
       if (xQueueReceive(playQueue, &currentRequest, portMAX_DELAY))
       {
          play:
-         Serial.printf("%lu: Playback of %s (prio %i, vol %i%%)\n", millis(), currentRequest.filename, currentRequest.prio, currentRequest.volume);
+         ESP_LOGI(TAG, "%lu: Playback of %s (prio %i, vol %i%%)", millis(), currentRequest.filename, currentRequest.prio, currentRequest.volume);
 
          out.SetGain((float)currentRequest.volume / 100.0f);
 
@@ -79,7 +80,7 @@ void SoundPlayer::requestPlayback(const std::string& filename, int prio, uint8_t
                }
                // Cancel by higher or same prio playback
                if (currentRequest.prio <= currentPrio) {
-                  Serial.printf("current playback cancelled by other playback\n");
+                  ESP_LOGD(TAG, "current playback cancelled by other playback");
                   goto play; // i know you shouldn't but hee hee
                }
             }
@@ -87,7 +88,7 @@ void SoundPlayer::requestPlayback(const std::string& filename, int prio, uint8_t
             delay(1);
          }
          wav.stop();
-         Serial.println("Finish playback");
+         ESP_LOGD(TAG, "Finish playback");
       }
    }
 }

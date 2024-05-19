@@ -34,7 +34,6 @@ Screen debugScreen(const InputValues& values, LiquidCrystal& lcd, bool enter)
       lcd.print("Pshb:");
       lcd.print(values.readingPushButtons);
       lcd.print("~");
-      if (values.pushBtn != prevPushBtn && values.pushBtn != BUTTON_NONE) Serial.println(ButtonTypeStr[values.pushBtn]);
       prevPushBtn = values.pushBtn;
       lcd.print(ButtonTypeStr[values.pushBtn]);
       lcd.print("  ");
@@ -44,7 +43,6 @@ Screen debugScreen(const InputValues& values, LiquidCrystal& lcd, bool enter)
       lcd.print("LCDb:");
       lcd.print(values.readingLcdButtons);
       lcd.print("~");
-      if (values.lcdBtn != prevLcdBtn && values.lcdBtn != BUTTON_NONE) Serial.println(ButtonTypeStr[values.lcdBtn]);
       prevLcdBtn = values.lcdBtn;
       lcd.print(ButtonTypeStr[values.lcdBtn]);
       lcd.print("  ");

@@ -1,3 +1,5 @@
+#define LOG_LOCAL_LEVEL ESP_LOG_VERBOSE
+
 #include <Arduino.h>
 #include <Wire.h>
 
@@ -8,12 +10,9 @@
 #include "pins.h"
 #include "sounds.h"
 
-#include "esp_log.h"
 #include "inputs.h"
 #include "config.h"
 #include "screens/screens.h"
-
-#define RUN_FTP 0
 
 #if RUN_FTP
 #include <WiFi.h>
@@ -23,6 +22,7 @@
 FTPServer ftp;
 #endif
 
+static const char* TAG = "main";
 hd44780_I2Cexp lcd16_2(0x27); // declare lcd object: auto locate & auto config expander chip
 ScreenManager screens;
 enum LastDisplayFunction {
@@ -39,10 +39,10 @@ void setup()
 
    while (!SD.begin(SS))
    {
-      Serial.println("Failed to initialize SD card");
+      ESP_LOGE(TAG, "Failed to initialize SD card");
       delay(100);
    }
-   Serial.println("SD card initialized successfully");
+   ESP_LOGI(TAG, "SD card initialized successfully");
 
    pinMode(RED_LED_PIN, OUTPUT);
    pinMode(RED_BUZZER_LED, OUTPUT);
@@ -105,12 +105,14 @@ void lightFirstBuzzer(bool red, bool blue, bool reset)
             {
                lcd16_2.print("ROT antwortet");
                digitalWrite(RED_BUZZER_LED, HIGH);
+               digitalWrite(RED_LED_PIN, HIGH);
                digitalWrite(BLUE_BUZZER_LED, LOW);
             }
             else
             {
                lcd16_2.print("BLAU antwortet");
                digitalWrite(RED_BUZZER_LED, LOW);
+               digitalWrite(RED_LED_PIN, LOW);
                digitalWrite(BLUE_BUZZER_LED, HIGH);
             }
 
@@ -177,7 +179,7 @@ void randomSound() {
    if (config.hasChanged(CFG_SOUND_RANDOM_PERIOD) || config.hasChanged(CFG_SOUND_RANDOM_ADD)
        || config.hasChanged(CFG_SOUND_RANDOM_ENABLE))
    {
-      Serial.println("Reinit random sounds due to config change");
+      ESP_LOGI(TAG, "Reinit random sounds due to config change");
       config.resetHasChanged(CFG_SOUND_RANDOM_PERIOD);
       config.resetHasChanged(CFG_SOUND_RANDOM_ADD);
       config.resetHasChanged(CFG_SOUND_RANDOM_ENABLE);
@@ -187,7 +189,7 @@ void randomSound() {
    if (millis() >= nextPlay && config.getValue(CFG_SOUND_RANDOM_ENABLE))
    {
       if (nextPlay != 0) {
-         Serial.println("Play random sound");
+         ESP_LOGI(TAG, "Play random sound");
          soundPlayer.requestPlayback(randomSounds[config.getValue(CFG_SOUND_RANDOM_SELECTION) % numberOfSounds], SOUND_PRIO_RANDOM,
                                      config.getValue(CFG_SOUND_RANDOM_VOLUME));
 
@@ -203,7 +205,7 @@ void randomSound() {
       int32_t randomOffsetMs = random(0, config.getValue(CFG_SOUND_RANDOM_ADD) * 60 * 1000L);
       int32_t nextOffset = max(5000, periodMs + randomOffsetMs);
       nextPlay = millis() + nextOffset;
-      Serial.printf("Next random sound in %.2fs (%.2fs + %.2fs)\n", nextOffset / 1000.0, periodMs / 1000.0,
+      ESP_LOGI(TAG, "Next random sound in %.2fs (%.2fs + %.2fs)", nextOffset / 1000.0, periodMs / 1000.0,
                     randomOffsetMs / 1000.0);
    }
 
@@ -228,7 +230,7 @@ void loop()
 #if RUN_FTP
    if (!ftpIsInit && WiFi.status() == WL_CONNECTED)
    {
-      Serial.println("Connected to Wifi + init FTP");
+      ESP_LOGI(TAG, "Connected to Wifi + init FTP");
       ftp.addUser(FTP_USER, FTP_PASSWORD);
       ftp.addFilesystem("SD", &SD);
       ftp.begin();

@@ -8,21 +8,25 @@
 #include <SD.h>
 #include <vector>
 #include <cmath>
-#include <algorithm>
 
 #define SOUNDBOARD_DIR "/soundboard"
 
+static const char* TAG = "soundboard";
+
 static void printSoundBoardPages(const std::vector<SoundBoardPage>& pages)
 {
+   uint32_t fileCount = 0;
    for (const auto& page: pages)
    {
-      Serial.printf("Folder %s [%i, %i]\n", page.name.c_str(), page.quickAccess[0], page.quickAccess[1]);
+      ESP_LOGD(TAG, "Folder %s [%i, %i]", page.name.c_str(), page.quickAccess[0], page.quickAccess[1]);
       for (int j = 0; j < FILES_PER_PAGE; j++)
       {
          auto& file = page.files[j];
-         Serial.printf("%s: (%i) %s\n", file.getFilename().c_str(), j, file.getDescription().c_str());
+         if (file.getFilename() != "") fileCount++;
+         ESP_LOGD(TAG, "%s: (%i) %s", file.getFilename().c_str(), j, file.getDescription().c_str());
       }
    }
+   ESP_LOGI(TAG, "Loaded %d folders with %d files", pages.size(), fileCount);
 }
 
 /**
@@ -118,7 +122,7 @@ static void readFiles(std::vector<SoundBoardPage>& pages)
    File root = SD.open(SOUNDBOARD_DIR);
    if (!root)
    {
-      Serial.println("Failed to open " SOUNDBOARD_DIR " directory");
+      ESP_LOGE(TAG, "Failed to open " SOUNDBOARD_DIR " directory");
       return;
    }
 
@@ -133,7 +137,7 @@ static void readFiles(std::vector<SoundBoardPage>& pages)
          if (parseDirname(file.name(), index, name) == 0) highestIndex = max(highestIndex, index);
       }
    }
-   Serial.printf("Highest index is %i\n", highestIndex);
+   ESP_LOGD(TAG, "Highest index is %i", highestIndex);
 
    // Iterate over directories to extract Soundboard sounds
    pages.clear();
@@ -254,6 +258,6 @@ int SoundBoard::getPageRangeFromSequence(const int* sequence, int& minPage, int&
          maxPage = max(maxPage, i);
       }
    }
-   Serial.printf("Page range for sequence %i, %i is %i - %i, rc=%i\n", sequence[0], sequence[1], minPage, maxPage, minPage == INT32_MAX ? -1 : 0);
+   ESP_LOGD(TAG, "Page range for sequence %i, %i is %i - %i, rc=%i", sequence[0], sequence[1], minPage, maxPage, minPage == INT32_MAX ? -1 : 0);
    return minPage == INT32_MAX ? -1 : 0;
 }

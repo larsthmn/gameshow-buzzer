@@ -18,6 +18,7 @@
 #include "sounds.h"
 #include <LcdMenu.h>
 
+static const char* TAG = "menuScreen";
 LcdMenu menu(4, 20);
 static bool requestDebugMenu = false;
 void updateMenuValues();
@@ -54,19 +55,19 @@ static void setConfigInt(uint16_t pos, ConfigValue cfg)
 {
    int mapped = (int)round(mapProgress(pos, (float)configDef[cfg].min, (float)configDef[cfg].max));
    config.setValue(cfg, mapped);
-   Serial.printf("changed %s to %u%s\n", configDef[cfg].name, config.getValue(cfg), configDef[cfg].unit);
+   ESP_LOGD(TAG, "changed %s to %u%s", configDef[cfg].name, config.getValue(cfg), configDef[cfg].unit);
 }
 
 static void setConfigIntNoMap(uint16_t pos, ConfigValue cfg)
 {
    config.setValue(cfg, pos);
-   Serial.printf("changed %s to %u%s\n", configDef[cfg].name, config.getValue(cfg), configDef[cfg].unit);
+   ESP_LOGD(TAG, "changed %s to %u%s", configDef[cfg].name, config.getValue(cfg), configDef[cfg].unit);
 }
 
 static void setConfigBool(uint16_t pos, ConfigValue cfg)
 {
    config.setValue(cfg, !!pos);
-   Serial.printf("changed %s to %s\n", configDef[cfg].name, pos ? "on" : "off");
+   ESP_LOGD(TAG, "changed %s to %s", configDef[cfg].name, pos ? "on" : "off");
 }
 
 #define ITEM_CONFIG_PROGRESS(text, cfg, stepwidth)                                                               \
@@ -124,7 +125,7 @@ void menuInit()
 
 static void setProgressFromCfg(MenuItem* menuItem, ConfigValue cfg)
 {
-   Serial.printf("%s: cfg: %d, step: %f => %f\n", configDef[cfg].name, config.getValue(CFG_TIME_TO_ANSWER),
+   ESP_LOGD(TAG, "%s: cfg: %d, step: %f => %f", configDef[cfg].name, config.getValue(CFG_TIME_TO_ANSWER),
                  STEP_WIDTH(configDef[CFG_TIME_TO_ANSWER].min, configDef[CFG_TIME_TO_ANSWER].max),
                  config.getValue(CFG_TIME_TO_ANSWER)
                  * STEP_WIDTH(configDef[CFG_TIME_TO_ANSWER].min, configDef[CFG_TIME_TO_ANSWER].max));

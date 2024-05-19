@@ -2,6 +2,7 @@
 #include "sounds.h"
 #include <Preferences.h>
 
+static const char* TAG = "config";
 static Preferences preferences;
 Config config;
 
@@ -22,7 +23,7 @@ const ConfigDefinition configDef[CFG_COUNT] = {
 void Config::save()
 {
    // Save settings
-   Serial.println("Save config");
+   ESP_LOGI(TAG, "Save config");
    preferences.begin("buzzer", false);
    for (int i = 0; i < CFG_COUNT; i++)
    {
@@ -34,7 +35,7 @@ void Config::save()
 void Config::load()
 {
    // Load settings
-   Serial.println("Load config");
+   ESP_LOGI(TAG, "Load config");
    preferences.begin("buzzer", false);
 
    for (int i = 0; i < CFG_COUNT; i++)
