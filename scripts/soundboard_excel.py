@@ -55,11 +55,13 @@ def directory_excel_generator(root_dir: str, output_file: str, flat: bool = Fals
     colors_alt = ['#FFFF00', '#FF0000', '#000000', '#00FF00', '#FFFFFF', '#0000FF']
     symbols_alt = ['⬤', '⬤', '⬤', '⬤', '⬤', '⬤']
 
+    caption_format_base = {'border': 1, 'bg_color': '#C0C0C0', 'bold': True}
+
     logging.info(f'Creating workbook {output_file}')
     workbook = xlsxwriter.Workbook(output_file)
     worksheet = workbook.add_worksheet()
     coloronly_formats = [workbook.add_format({'font_color': clr}) for clr in colors]
-    color_formats_header = [workbook.add_format({'font_color': clr, 'border': 1, 'bg_color': '#C0C0C0', 'bold': True}) for clr in
+    color_formats_header = [workbook.add_format({'font_color': clr, 'align': 'center'} | caption_format_base) for clr in
                             colors_alt]
     border = workbook.add_format({'border': 1})
     border_no_right = workbook.add_format({'border': 1})
@@ -69,7 +71,21 @@ def directory_excel_generator(root_dir: str, output_file: str, flat: bool = Fals
     align_right_border = workbook.add_format({'align': 'right', 'border': 1})
     black = workbook.add_format({'font_color': 'black'})
     black_header = color_formats_header[2]
-    merged_format = workbook.add_format({'align': 'left', 'bold': True, 'border': 1, 'bg_color': '#C0C0C0'})
+    merged_format = workbook.add_format(caption_format_base | {'align': 'left'})
+
+    caption_left = workbook.add_format(caption_format_base)
+    caption_left.set_right(0)
+    caption_right = workbook.add_format(caption_format_base | {'align': 'center'})
+    caption_right.set_right(0)
+
+    text_colored_border = [workbook.add_format({'border': 1}) for _ in colors]
+    text_colored_border_alt = [workbook.add_format({'border': 1, 'bg_color': '#E0E0E0'}) for _ in colors]
+    for i, f in enumerate(text_colored_border):
+        f.set_left_color(colors[i])
+        f.set_left(5)
+    for i, f in enumerate(text_colored_border_alt):
+        f.set_left_color(colors[i])
+        f.set_left(5)
 
     worksheet.set_column(0, COL_OFFSET, 2.14)
     for i in range(ROW_OFFSET):
@@ -82,6 +98,13 @@ def directory_excel_generator(root_dir: str, output_file: str, flat: bool = Fals
         except AttributeError:
             continue
         directories.append({'index': int(index) - 1, 'name': name, 'path': os.path.join(root_dir, d)})
+
+    if flat:
+        worksheet.set_column(COL_OFFSET, COL_OFFSET, 12)
+        worksheet.set_column(COL_OFFSET + 1, COL_OFFSET + 1, 4.5)
+        worksheet.set_column(COL_OFFSET + 2, COL_OFFSET + 8, 12)
+        for i in range(6):
+            worksheet.write(ROW_OFFSET, COL_OFFSET + i + 2, symbols_alt[i], color_formats_header[i])
 
     for dir_index, subdir in enumerate(sorted(directories, key=lambda x: x['index'])):
         logging.info(f"Processing directory '{subdir}'")
@@ -113,43 +136,39 @@ def directory_excel_generator(root_dir: str, output_file: str, flat: bool = Fals
             continue
 
         # Header for page with colored buttons
-        seq = get_sequence_for_page(subdir['index'], len(directories), 6)
+        page_seq = get_sequence_for_page(subdir['index'], len(directories), 6)
 
         if flat:
-            row = dir_index + ROW_OFFSET
+            row = dir_index + ROW_OFFSET + 1
             col = COL_OFFSET
-            worksheet.write(row, col, str(subdir['index'] + 1) + ". " + subdir['name'], black_header)
+
+            worksheet.write(row, col, str(subdir['index'] + 1) + ". " + subdir['name'], caption_left)
             sequence_richtext = []
-            for s in seq:
-                sequence_richtext.append(coloronly_formats[s])
-                sequence_richtext.append(symbols[s] + " ")
+            for s in page_seq:
+                sequence_richtext.append(color_formats_header[s])
+                sequence_richtext.append(symbols_alt[s] + " ")
+            worksheet.write_rich_string(row, col + 1, *sequence_richtext, '\u200b', caption_right)
         else:
             # Calculate number of the current row and column (5 directories in a row)
             row = (dir_index // TABLES_PER_ROW) * (3 + 2) + ROW_OFFSET  # 2x3 table size with one row padding
             col = (dir_index % TABLES_PER_ROW) * 3 + COL_OFFSET
             worksheet.merge_range(row, col, row, col + 1, 'will be overwritten', merged_format)
             sequence_richtext = []
-            for s in seq:
+            for s in page_seq:
                 sequence_richtext.append(color_formats_header[s])
                 sequence_richtext.append(symbols_alt[s] + " ")
             worksheet.write_rich_string(row, col, *sequence_richtext, black_header,
                                         str(subdir['index'] + 1) + ". " + subdir['name'], black_header)
 
-        if flat:
-            worksheet.set_column(col, col, 15)
-            for i in range(6):
-                worksheet.set_column(col + 2 * i + 1, col + 2 * i + 1, 6.71)
-                worksheet.set_column(col + 2 * i + 2, col + 2 * i + 2, 13)
-        else:
+        if not flat:
             worksheet.set_column(col, col + 1, 19)
             worksheet.set_column(col + 2, col + 2, 2.14)
 
         for i, filename in enumerate(filenames):
             if filename != "":
                 if flat:
-                    # color first, then file name
-                    worksheet.write_rich_string(row, col + 2 * i + 1, *sequence_richtext, coloronly_formats[i], symbols[i], border_no_right)
-                    worksheet.write(row, col + 2 * i + 2, filename, border_no_left)
+                    # only file name
+                    worksheet.write(row, col + i + 2, filename, text_colored_border[i] if row % 2 == 0 else text_colored_border_alt[i])
                 else:
                     if i % 2 == 0:
                         # color first, then file name
