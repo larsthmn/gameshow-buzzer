@@ -18,8 +18,11 @@ Most of them can be replaced by similar components.
  - ESP32 from [here](https://github.com/FKainka/NodeESP_Firmware) (just use any you got lying around)
  - 5V LCD1602 with I2C interface (actually a bit useless)
  - Max98357 I2S 3W Class D Amplifier
- - 6pcs Self-Lock /Momentary Pushbutton Switches DS228 DS428 12mm OFF- ON Push (colored)
  - JCD 1PCS Notebook Speaker Horn 2W 8R
+ - PCM5102A I2S DAC for an external speaker (added that after I realized the small cheap one may be overheard with people around).
+   You may need to make some solder bridges like [here](https://github.com/pschatzmann/ESP32-A2DP/wiki/External-DAC): 
+   Bridge SCK on top, bridge 1, 2, 4 to L and 3 to H on bottom
+ - 6pcs Self-Lock /Momentary Pushbutton Switches DS228 DS428 12mm OFF- ON Push (colored)
  - 2x 100mm Big Round Push Button LED Illuminated with Microswitch for DIY Arcade Game Machine Parts 5/12V Large Dome Light Switch
  - 3A Mini DC-DC Buck Step Down Converter Board Module 5V-30V to 5V DC DC Voltage Regulator PCB Board Power Buck Module
  - 20x4 LCD from Anet A8 (schematic [here](https://github.com/ralf-e/ANET-3D-Board-V1.0)) 
